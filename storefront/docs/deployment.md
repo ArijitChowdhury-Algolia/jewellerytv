@@ -1,0 +1,41 @@
+# GitHub and Vercel deployment
+
+Repository: https://github.com/ArijitChowdhury-Algolia/jewellerytv. Vercel project: algolia/jewellerytv. Production alias: jewellerytv.vercel.app.
+
+## Project configuration
+
+- Root directory: storefront
+- Framework: Vite
+- Node runtime:24.x
+- Install: npm ci
+- Build: npm run build
+- Static output: dist
+- Node function: api/[...path].ts, maximum duration180 seconds
+- SPA rewrites preserve direct category, product and search links.
+- Vercel Authentication: All Deployments. Protects the production alias and generated deployment URLs. Host/Origin validation is an additional boundary, not authentication.
+
+## Server environment
+
+Set ALGOLIA_APP_ID, ALGOLIA_SEARCH_API_KEY and APP_ALLOWED_HOSTS in Production and Preview. APP_ALLOWED_HOSTS includes jewellerytv.vercel.app. The function also trusts the exact Vercel-provided deployment and production hostnames. It does not trust arbitrary forwarded-host values.
+
+Optional JTV_BRIEF_AGENT_ID identifies a dedicated deployed brief extractor. If unset, automatic proposals are unavailable with a visible explanation; manual shopping-brief editing and the main concierge still work. No raw agent snapshot is needed in the deployment.
+
+Never expose credentials in VITE variables, commit .env files, or upload local research/evidence. The application uses process.env in the cloud. Local startup retains its parent .env.local fallback.
+
+## Release checks
+
+Run npm ci, npm run typecheck, npm test and npm run build from a clean source export. Scan the outgoing tree/history for secrets. Verify GitHub Actions against the pushed commit. Then deploy and verify:
+
+1. Unauthenticated access to production and generated deployment URLs is protected.
+2. Authenticated /api/health succeeds.
+3. Catalogue queries, exact product URLs and facets work.
+4. Chat streams a real response and product cards navigate locally.
+5. No API key is present in browser requests or the built frontend.
+
+No deployment step writes to the production catalogue or changes the main concierge configuration. Runtime conversations can update the provider's usage/history according to its existing settings.
+
+Rollback through Vercel's previous deployment controls. Never rewrite Git history as deployment cleanup.
+
+## Diagram rendering
+
+The architecture SVG is self-contained, uses standard Arial/Helvetica fonts and no external assets. No PNG fallback is needed for GitHub's SVG rendering. The README image and hosted workflow are checked after publication.

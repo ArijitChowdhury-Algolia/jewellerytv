@@ -1,0 +1,439 @@
+{
+  "capturedAt": "2026-09-29",
+  "source": "Saved read-only prod_catalog samples; prices and inventory are historical fixtures",
+  "records": [
+    {
+      "objectID": "CTB1412",
+      "Catalog_ProductNumber": "CTB1412",
+      "Catalog_SKUNumbers": [
+        "CTB1412-5",
+        "CTB1412-6",
+        "CTB1412-7",
+        "CTB1412-8",
+        "CTB1412-9",
+        "CTB1412-10",
+        "CTB1412-11"
+      ],
+      "Catalog_TitleDescription": "Blue Tanzanite Rhodium Over Sterling Silver Ring 1.50ctw",
+      "Catalog_LongDescription": "1.45ctw Oval And 0.05ctw Round Tanzanite Rhodium Over Sterling Silver Ring. Measures Approximately 0.85\"L x 0.25\"W. Not sizeable.",
+      "Catalog_ProductType": "Ring",
+      "Catalog_ConsumerProductCategoryDisplayNames": [
+        "All",
+        "All JTV",
+        "Band Rings",
+        "Blue Gemstone Jewelry",
+        "Blue Gemstone Rings",
+        "Color Gemstone Band Rings",
+        "Color Gemstone Jewelry",
+        "Color Gemstone Rings",
+        "Color Gemstone Silver Jewelry",
+        "Color Gemstone Silver Rings",
+        "Fine Jewelry",
+        "Fine Rings",
+        "Gemstone Jewelry",
+        "Jewelry",
+        "Oval Shape Gemstone Rings",
+        "Rings",
+        "Silver Rings",
+        "Sterling Silver Band Rings",
+        "Sterling Silver Jewelry",
+        "Sterling Silver Tanzanite Rings",
+        "Tanzanite Band Rings",
+        "Tanzanite Jewelry",
+        "Tanzanite Rings",
+        "Tanzanite Silver Jewelry",
+        "Women's Band Rings",
+        "Women's Color Gemstone Jewelry",
+        "Women's Color Gemstone Rings",
+        "Women's Jewelry",
+        "Women's Rings",
+        "Women's Silver Rings"
+      ],
+      "Catalog_GemstoneInformationPrimary": [
+        {
+          "GemstoneCTW": "1-2 ctw",
+          "GemstoneColor": "Blue",
+          "GemstoneColorGroup": "Blue",
+          "GemstoneCreationClassification": "Natural",
+          "GemstoneName": "Tanzanite",
+          "GemstoneOriginCountry": "Tanzania, United Republic Of",
+          "GemstoneShape": "Oval"
+        }
+      ],
+      "Catalog_MaterialInformation": [
+        {
+          "MaterialColor": "White",
+          "MaterialColorGroup": "White",
+          "MaterialPurity": "Sterling",
+          "MaterialType": "Silver"
+        }
+      ],
+      "Catalog_JewelryMaterialNavigationName": [
+        "Silver"
+      ],
+      "Catalog_JewelryMaterialNavigationColor": [
+        "White"
+      ],
+      "Catalog_JewelryMaterialNavigationPurity": [
+        "Sterling"
+      ],
+      "Inventory_AvailableSkuSizes": [
+        "7",
+        "8",
+        "9",
+        "11"
+      ],
+      "Inventory_AvailableSkuSizeNames": [
+        "Size 7",
+        "Size 8",
+        "Size 9",
+        "Size 11"
+      ],
+      "Inventory_InStock": true,
+      "Pricing_ActivePrice": 149.99,
+      "Pricing_PriceRange": "$100 - $200",
+      "Pricing_PriceLabelName": "Power Buy",
+      "Media_Images": [
+        "https://images.jtv.com/jewelry/JTV-CTB1412-1.jpg",
+        "https://images.jtv.com/jewelry/JTV-CTB1412-2.jpg",
+        "https://images.jtv.com/jewelry/JTV-CTB1412-3.jpg",
+        "https://images.jtv.com/jewelry/JTV-CTB1412-4.jpg"
+      ],
+      "Ratings_AverageRating": 4.31
+    },
+    {
+      "objectID": "PW186",
+      "Catalog_ProductNumber": "PW186",
+      "Catalog_SKUNumbers": [
+        "PW186-20",
+        "PW186-18"
+      ],
+      "Catalog_TitleDescription": "Multi-Color Cultured Freshwater Pearl Gold Tone Stainless Steel Necklace",
+      "Catalog_LongDescription": "6-10mm Multi-Color Cultured Freshwater Pearl Gold Tone Stainless Steel Necklace. Measures approximately 3/8 of an inch in width and has a lobster claw clasp with a 2 inch Extender. Colors, shapes, and sizes may vary.",
+      "Catalog_ProductType": "Necklace",
+      "Catalog_ConsumerProductCategoryDisplayNames": [
+        "All",
+        "All JTV",
+        "Birthstone Necklaces",
+        "Birthstones",
+        "Color Gemstone Jewelry",
+        "Color Gemstone Necklaces",
+        "Color Gemstone Station Necklaces",
+        "Fashion Jewelry",
+        "Fashion Necklaces",
+        "Freshwater Pearl Jewelry",
+        "Freshwater Pearl Necklaces",
+        "Jewelry",
+        "Necklaces",
+        "Pearl Jewelry",
+        "Pearl Necklaces",
+        "Pearl Station Necklaces",
+        "Stainless Steel Jewelry",
+        "Stainless Steel Necklaces",
+        "Station Jewelry",
+        "Station Necklaces",
+        "Women's Jewelry",
+        "Women's Necklaces"
+      ],
+      "Catalog_MaterialInformation": [
+        {
+          "MaterialColor": "Gold Tone",
+          "MaterialColorGroup": "Yellow",
+          "MaterialPurity": "Stainless",
+          "MaterialType": "Steel"
+        }
+      ],
+      "Catalog_JewelryMaterialNavigationName": [
+        "Steel"
+      ],
+      "Catalog_JewelryMaterialNavigationColor": [
+        "Yellow"
+      ],
+      "Catalog_JewelryMaterialNavigationPurity": [
+        "Stainless"
+      ],
+      "Inventory_AvailableSkuSizes": [
+        "18"
+      ],
+      "Inventory_AvailableSkuSizeNames": [
+        "18 Inch"
+      ],
+      "Inventory_InStock": true,
+      "Pricing_ActivePrice": 54.99,
+      "Pricing_PriceRange": "$50 - $100",
+      "Pricing_PriceLabelName": "Super Buy Price",
+      "Media_Images": [
+        "https://images.jtv.com/jewelry/pearls/JTV-PW186-1.jpg"
+      ],
+      "Ratings_AverageRating": 4.75
+    },
+    {
+      "objectID": "BCO689C",
+      "Catalog_ProductNumber": "BCO689",
+      "Catalog_SKUNumbers": [
+        "BCO689C-65",
+        "BCO689C-7",
+        "BCO689C-75"
+      ],
+      "Catalog_TitleDescription": "3mm Blue Cubic Zirconia Rhodium Plated Flex Bangle Bracelet 6.40ctw",
+      "Catalog_LongDescription": "Bella Luce\u00ae Ottone 6.40ctw 3mm Square Aquamarine Simulant Rhodium Plated Flex Bangle Bracelet. Measures approximately 0.17\"W and has a push button clasp.",
+      "Catalog_ProductType": "Bracelet",
+      "Catalog_Brand": "Bella Luce",
+      "Catalog_BrandNavigationName": [
+        "Bella Luce",
+        "Bella Luce Ottone"
+      ],
+      "Catalog_ConsumerProductCategoryDisplayNames": [
+        "All",
+        "All JTV",
+        "Bangle Bracelets",
+        "Bella Luce Blue Bracelets",
+        "Bella Luce Blue Jewelry",
+        "Bella Luce Bracelets",
+        "Bella Luce Color Bracelets",
+        "Bella Luce Color Jewelry",
+        "Bella Luce Colors of Bella Jewelry",
+        "Bella Luce Jewelry",
+        "Bella Luce Ottone",
+        "Blue Cubic Zirconia Jewelry",
+        "Blue Gemstone Bracelets",
+        "Blue Gemstone Jewelry",
+        "Bracelets",
+        "Brass Jewelry",
+        "Color Cubic Zirconia Bracelets",
+        "Color Cubic Zirconia Jewelry",
+        "Color Gemstone Bangle Bracelets",
+        "Color Gemstone Bracelets",
+        "Color Gemstone Jewelry",
+        "Cubic Zirconia Bangle Bracelets",
+        "Cubic Zirconia Bracelets",
+        "Cubic Zirconia Jewelry",
+        "Fashion Bracelets",
+        "Fashion Jewelry",
+        "JTV Exclusive Brands",
+        "Jewelry",
+        "Lab Created Jewelry",
+        "Stackable Bracelets",
+        "Women's Bracelets",
+        "Women's Color Gemstone Jewelry",
+        "Women's Jewelry"
+      ],
+      "Catalog_GemstoneInformationPrimary": [
+        {
+          "GemstoneCTW": "5-10 ctw",
+          "GemstoneCalibratedDimensions": "3 mm",
+          "GemstoneColor": "Blue",
+          "GemstoneColorGroup": "Blue",
+          "GemstoneCreationClassification": "Lab Created",
+          "GemstoneName": "Cubic Zirconia",
+          "GemstoneShape": "Square",
+          "GemstoneSimulant": "True",
+          "GemstoneSimulantGemstone": "Aquamarine"
+        }
+      ],
+      "Catalog_MaterialInformation": [
+        {
+          "MaterialColor": "White",
+          "MaterialColorGroup": "White",
+          "MaterialType": "Brass"
+        }
+      ],
+      "Catalog_JewelryMaterialNavigationName": [
+        "Brass"
+      ],
+      "Catalog_JewelryMaterialNavigationColor": [
+        "White"
+      ],
+      "Inventory_AvailableSkuSizes": [
+        "6.5",
+        "7",
+        "7.5"
+      ],
+      "Inventory_AvailableSkuSizeNames": [
+        "6.5 Inch",
+        "7 Inch",
+        "7.5 Inch"
+      ],
+      "Inventory_InStock": true,
+      "Pricing_ActivePrice": 39.99,
+      "Pricing_PriceRange": "$25 - $50",
+      "Pricing_PriceLabelName": "Super Buy Price",
+      "Media_Images": [
+        "https://images.jtv.com/jewelry/JTV-BCO689C-1.jpg",
+        "https://images.jtv.com/jewelry/JTV-BCO689C-2.jpg",
+        "https://images.jtv.com/jewelry/JTV-BCO689C-3.jpg"
+      ]
+    },
+    {
+      "objectID": "JRJ802A",
+      "Catalog_ProductNumber": "JRJ802",
+      "Catalog_SKUNumbers": [
+        "JRJ802A"
+      ],
+      "Catalog_TitleDescription": "Judith Ripka Brown Mother-Of-Pearl & Bella Luce\u00ae Gold Tone & Brown Leather Alexandra Watch 0.19ctw",
+      "Catalog_LongDescription": "Judith Ripka Brown Mother-Of-Pearl & 0.19ctw Bella Luce\u00ae Diamond Simulant Gold Tone & Brown Saffiano Leather Strap Alexandra Watch. Measures Approximately 0.59\"W.",
+      "Catalog_ProductType": "Wrist Watch",
+      "Catalog_Brand": "Judith Ripka",
+      "Catalog_BrandNavigationName": [
+        "Judith Ripka"
+      ],
+      "Catalog_ConsumerProductCategoryDisplayNames": [
+        "All",
+        "All JTV",
+        "Brown Band Watches",
+        "Dress Watches",
+        "Jewelry",
+        "Judith Ripka Jewelry",
+        "Leather Band Watches",
+        "Watches",
+        "Women's Watches"
+      ],
+      "Inventory_InStock": true,
+      "Pricing_ActivePrice": 149.99,
+      "Pricing_PriceRange": "$100 - $200",
+      "Pricing_PriceLabelName": "Power Buy",
+      "Media_Images": [
+        "https://images.jtv.com/jewelry/JTV-JRJ802A-1.jpg",
+        "https://images.jtv.com/jewelry/JTV-JRJ802A-2.jpg",
+        "https://images.jtv.com/jewelry/JTV-JRJ802A-3.jpg"
+      ],
+      "Ratings_AverageRating": 5
+    },
+    {
+      "objectID": "17T5XA",
+      "Catalog_ProductNumber": "17T5X",
+      "Catalog_SKUNumbers": [
+        "17T5XA"
+      ],
+      "Catalog_TitleDescription": "2.50ct Round White Lab-Grown Diamond E Color VS-1 Clarity IGI Certified",
+      "Catalog_LongDescription": "Prazana\u00ae Lab-Grown Diamonds 2.50ct Round White Lab-Grown Diamond E Color VS-1 Clarity IGI Certified. MM size will vary slightly.",
+      "Catalog_ProductType": "Single Gemstone",
+      "Catalog_Brand": "Prazana Lab-Grown Diamonds",
+      "Catalog_BrandNavigationName": [
+        "Prazana Lab-Grown Diamonds"
+      ],
+      "Catalog_ConsumerProductCategoryDisplayNames": [
+        "All",
+        "All JTV",
+        "Diamond Gemstones",
+        "Gemstones",
+        "Loose Gemstones",
+        "Loose Lab-Grown Diamonds",
+        "White Diamond Gemstones",
+        "White Gemstones"
+      ],
+      "Catalog_GemstoneInformationPrimary": [
+        {
+          "GemstoneCTW": "2-5 ctw",
+          "GemstoneColor": "White",
+          "GemstoneColorGroup": "White",
+          "GemstoneCreationClassification": "Lab-Grown",
+          "GemstoneName": "Diamond",
+          "GemstoneOriginCountry": "India",
+          "GemstoneShape": "Round"
+        }
+      ],
+      "Inventory_InStock": true,
+      "Pricing_ActivePrice": 570,
+      "Pricing_PriceRange": "$500 - $1000",
+      "Pricing_PriceLabelName": "Anniversary Price",
+      "Media_Images": [
+        "https://images.jtv.com/gemstones/JTV-17T5XA-1.jpg",
+        "https://images.jtv.com/gemstones/JTV-17T5XA-2.jpg"
+      ],
+      "Ratings_AverageRating": 5
+    },
+    {
+      "objectID": "MFP256C",
+      "Catalog_ProductNumber": "MFP256",
+      "Catalog_SKUNumbers": [
+        "MFP256C-5",
+        "MFP256C-6",
+        "MFP256C-7",
+        "MFP256C-8",
+        "MFP256C-9",
+        "MFP256C-10",
+        "MFP256C-11"
+      ],
+      "Catalog_TitleDescription": "Moissanite Platineve Band Ring 1.65ctw DEW.",
+      "Catalog_LongDescription": "Moissanite Fire\u00ae 1.65ctw diamond equivalent weight round brilliant cut, Platineve\u00ae ring. Measures approximately 0.82\" L x 0.17\" W and is not sizeable. Actual moissanite weight is 1.50ctw.",
+      "Catalog_ProductType": "Ring",
+      "Catalog_Brand": "Moissanite Fire",
+      "Catalog_BrandNavigationName": [
+        "Moissanite Fire"
+      ],
+      "Catalog_ConsumerProductCategoryDisplayNames": [
+        "All",
+        "All JTV",
+        "Band Rings",
+        "Classic Band Rings",
+        "Classic Jewelry Styles",
+        "Fine Jewelry",
+        "Fine Rings",
+        "JTV Exclusive Brands",
+        "Jewelry",
+        "Lab Created Jewelry",
+        "Moissanite Band Rings",
+        "Moissanite Fire Jewelry",
+        "Moissanite Fire Rings",
+        "Moissanite Jewelry",
+        "Moissanite Rings",
+        "Platineve Jewelry",
+        "Platineve Moissanite Jewelry",
+        "Platineve Rings",
+        "Rings",
+        "Round Shape Gemstone Rings",
+        "Round Shape Moissanite Jewelry",
+        "White Gemstone Rings",
+        "Women's Band Rings",
+        "Women's Jewelry",
+        "Women's Moissanite Jewelry",
+        "Women's Moissanite Rings",
+        "Women's Rings"
+      ],
+      "Catalog_GemstoneInformationPrimary": [
+        {
+          "GemstoneCTW": "1-2 ctw",
+          "GemstoneCalibratedDimensions": "4.5 mm",
+          "GemstoneColor": "Colorless",
+          "GemstoneColorGroup": "Colorless",
+          "GemstoneCreationClassification": "Lab Created",
+          "GemstoneName": "Moissanite",
+          "GemstoneShape": "Round"
+        }
+      ],
+      "Catalog_MaterialInformation": [
+        {
+          "MaterialColor": "White",
+          "MaterialColorGroup": "White",
+          "MaterialType": "Platineve\u00ae"
+        }
+      ],
+      "Catalog_JewelryMaterialNavigationName": [
+        "Platineve\u00ae"
+      ],
+      "Catalog_JewelryMaterialNavigationColor": [
+        "White"
+      ],
+      "Inventory_AvailableSkuSizes": [
+        "5",
+        "10",
+        "11"
+      ],
+      "Inventory_AvailableSkuSizeNames": [
+        "Size 5",
+        "Size 10",
+        "Size 11"
+      ],
+      "Inventory_InStock": true,
+      "Pricing_ActivePrice": 94.99,
+      "Pricing_PriceRange": "$50 - $100",
+      "Pricing_PriceLabelName": "Super Buy Price",
+      "Media_Images": [
+        "https://images.jtv.com/jewelry/JTV-MFP256C-1.jpg",
+        "https://images.jtv.com/jewelry/JTV-MFP256C-2.jpg",
+        "https://images.jtv.com/jewelry/JTV-MFP256C-3.jpg"
+      ]
+    }
+  ]
+}
