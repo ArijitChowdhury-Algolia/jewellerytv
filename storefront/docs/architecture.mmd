@@ -1,0 +1,14 @@
+flowchart LR
+  User[Shopper] --> Chat[Conversation and handoffs]
+  User --> Workspace[Discover / Compare / Saved / Combination]
+  Workspace --> Session[Per-tab selections and confirmed brief]
+  Session --> Context[Bounded turn context]
+  Context --> Chat
+  Chat --> API[Validated server API]
+  API --> Agent[Hosted concierge]
+  Agent --> Catalogue[Read-only catalogue]
+  Catalogue --> Curated[Retrieved records and curated IDs]
+  Curated --> Workspace
+  Agent --> Chat
+  Workspace --> API
+  API --> Catalogue

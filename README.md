@@ -12,9 +12,9 @@ The app uses React InstantSearch for search and chat. A server-side API keeps Al
 
 ![Storefront and concierge workflow](storefront/docs/architecture.svg)
 
-The same validated API handler runs locally and as a Vercel Node function. Product URLs use exact Algolia objectIDs, not product-family IDs. The client sends bounded page context with each message. Recommendations open local product pages, and the shopper controls any change to the browsing view.
+The same validated API handler runs locally and as a Vercel Node function. Product URLs use exact Algolia objectIDs, not product-family IDs. The client sends bounded page context with each message. Curated product results feed a separate visual workspace; the conversation retains questions and short handoffs. The shopper controls product previews and any change to the browsing view.
 
-The shopping workspace supports a shortlist, comparison and an editable brief. Automatic brief proposals require a separately configured extractor agent and explicit shopper confirmation; manual editing and the main concierge remain available without it. The hosted agents own their model configuration; this repository does not automatically overwrite their prompts or settings.
+The shopping workspace separates Discover, Compare, Saved and Combination. Compare shows alternatives with images and recorded facts; only Combination calculates a purchase subtotal. Exact product records are shared across views and refreshed through read-only requests. The editable shopping brief stays behind an optional disclosure. Automatic brief proposals require a separately configured extractor agent and explicit shopper confirmation; manual editing and the main concierge remain available without it. The hosted agents own their model configuration; this repository does not automatically overwrite their prompts or settings.
 
 ## Run and verify
 
