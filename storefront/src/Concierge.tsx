@@ -38,7 +38,7 @@ function ChatLayout(props:ChatLayoutOwnProps){
  {resetting&&<div className="mission-reset" role="alert"><p>Start fresh? Your current shopping brief and saved pieces will be cleared.</p><button onClick={reset}>Start a new mission</button><button onClick={()=>setResetting(false)}>Keep shopping</button></div>}
  {shopping&&<nav className="workspace-sections" aria-label="Concierge sections"><button aria-pressed={section==='conversation'} onClick={()=>setSection('conversation')}>Conversation</button><button aria-pressed={section==='shopping'} onClick={()=>setSection('shopping')}>Products</button></nav>}
  <div className="concierge-workspace-body" data-section={section}>
- <section className="conversation-column" aria-label="Conversation"><div className="concierge-messages">{sendError&&<p className="brief-error" role="alert">{sendError}</p>}{props.messagesComponent}</div><div className="concierge-prompt">{props.promptComponent}<small>Catalogue-backed discovery · Local demo</small></div></section>
+ <section className="conversation-column" aria-label="Conversation"><div className="concierge-messages">{sendError&&<p className="brief-error" role="alert">{sendError}</p>}{props.messagesComponent}</div><div className="concierge-prompt">{props.promptComponent}</div></section>
  {shopping&&<section className="shopping-column" aria-label="Your shopping workspace">
  {notes.notice&&<p className="brief-status">{notes.notice}</p>}
  {notes.loading&&<p className="brief-status" role="status">Updating your shopping notes…</p>}
