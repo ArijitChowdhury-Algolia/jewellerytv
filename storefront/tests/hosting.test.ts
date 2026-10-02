@@ -12,3 +12,4 @@ it('accepts Vercel pre-parsed JSON request bodies without reading an exhausted s
 import {normalizeVercelRequestURL} from '../server/vercel-routing';
 it('removes only the catchall routing parameter injected by Vercel',()=>{expect(normalizeVercelRequestURL('/api/health?path=health')).toBe('/api/health');expect(normalizeVercelRequestURL('/api/products/MFP256C?path=products%2FMFP256C')).toBe('/api/products/MFP256C');expect(normalizeVercelRequestURL('/api/search?path=search&unexpected=1')).toBe('/api/search?unexpected=1');});
 it('normalizes the actual Vercel catchall ...path capture',()=>{expect(normalizeVercelRequestURL('/api/health?...path=health')).toBe('/api/health');expect(normalizeVercelRequestURL('/api/products/MFP256C?...path=products%2FMFP256C')).toBe('/api/products/MFP256C');});
+it('normalizes the explicit nested Vercel product route metadata',()=>{expect(normalizeVercelRequestURL('/api/products/MFP256C?objectID=MFP256C')).toBe('/api/products/MFP256C');});
