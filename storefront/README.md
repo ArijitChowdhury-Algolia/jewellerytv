@@ -78,7 +78,7 @@ Rollback consists of stopping the local processes. No index settings, records, p
 
 ## Shopping workspace
 
-The default concierge now opens beside a persistent shopping area. Use product hearts to save up to 12 exact catalogue records, select up to three alternatives in Compare, or separately build a Combination with quantities and a total or per-item USD budget. Curated discoveries and product previews appear in the right panel; chat contains conversation and a short handoff. Totals use integer cents; missing prices remain unknown. The shortlist and confirmed brief persist in this tab's session storage; a new shopping mission clears both. Recorded prices require refresh before purchase.
+The default concierge now opens beside a persistent shopping area. Use product hearts to save up to 12 exact catalogue records, select up to three alternatives in Compare, or separately build a Combination with quantities and a total or per-item USD budget. Curated discoveries and product previews appear in the right panel; chat retains the agent’s conversational introduction and questions. Totals use integer cents; missing prices remain unknown. The shortlist and confirmed brief persist in this tab's session storage; a new shopping mission clears both. Recorded prices require refresh before purchase.
 
 Confirm, edit or remove preferences in the brief. Model-generated proposals require a matching verbatim current-mission user quote and explicit shopper confirmation. Quotes establish provenance, not guaranteed interpretation. Scope is retained. Full quotes stay local; only compact confirmed facts and provenance IDs enter bounded per-turn context. Oversized context blocks a request visibly rather than dropping constraints.
 
