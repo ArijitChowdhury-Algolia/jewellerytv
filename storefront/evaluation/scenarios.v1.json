@@ -1,0 +1,246 @@
+{
+  "version": "1.0.0",
+  "source": "docs/concierge/understanding-and-discovery-playbook.md",
+  "scenarios": [
+    {
+      "id": "anniversary",
+      "playbook_sections": "P01 P04 P06; Curate combinations",
+      "turns": [
+        {
+          "say": "I need an anniversary gift for my wife. My expertise ends at shiny. Can you help?",
+          "review": "Warmth, useful contribution, no intake checklist."
+        },
+        {
+          "say": "She likes blue stones and silver, nothing yellow gold. $300 for necklace and earrings together. I do not know the style.",
+          "review": "Combined budget, uncertainty retained; no inferred no-plating."
+        },
+        {
+          "say": "Let the necklace do the talking; quieter earrings please.",
+          "review": "Discover distinct directions through supported products."
+        },
+        {
+          "say": "Keep {selected_id}. Make the total $200 if possible.",
+          "review": "Preserve exact anchor; calculate pair in cents; do not sum alternative cards.",
+          "without_selection": "I have not seen a verified selection yet. Please help me find a supported candidate, or explain the specific missing evidence."
+        },
+        {
+          "say": "The earrings feel too busy. Simpler, while keeping the necklace.",
+          "review": "Adapt only changed preference; persistent anchor cards."
+        },
+        {
+          "say": "Thanks, you saved me from another candle. That is everything, bye!",
+          "review": "Natural humour and close; no new sales suggestions."
+        }
+      ]
+    },
+    {
+      "id": "material",
+      "playbook_sections": "P03 P07; Evidence boundaries",
+      "turns": [
+        {
+          "say": "Show me sterling silver studs strictly below $150 each.",
+          "review": "Search valid schema; verify actual prices.",
+          "checks": {
+            "each_below_cents": 15000
+          }
+        },
+        {
+          "say": "Does sterling silver mean there cannot be any plating?",
+          "review": "Distinguish material, purity and coating from approved evidence."
+        },
+        {
+          "say": "No plating is now a firm requirement. Which ones have evidence for that?",
+          "review": "Missing coating data is not proof of unplated."
+        },
+        {
+          "say": "Rhodium is okay after all; keep sterling underneath.",
+          "review": "Explicit correction replaces no-plating without losing budget."
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "playbook_sections": "Exact-item lookup; P07",
+      "turns": [
+        {
+          "say": "I saw a blue oval ring on JTV yesterday. I think the name included Bella.",
+          "review": "Targeted identity lookup without full gift intake."
+        },
+        {
+          "say": "Blue centre, clear stones around. Is the closest one definitely from that broadcast?",
+          "review": "Do not invent broadcast identity."
+        },
+        {
+          "say": "Show me close candidates but label what is unconfirmed.",
+          "review": "Evidence-backed candidates with no exact-match guarantee."
+        },
+        {
+          "say": "Compare the shape of {selected_id} with what I described.",
+          "review": "Component-level shape vs overall product shape.",
+          "without_selection": "I have not seen a verified selection yet. Please help me find a supported candidate, or explain the specific missing evidence."
+        }
+      ]
+    },
+    {
+      "id": "wearability",
+      "playbook_sections": "P02 P05 P07",
+      "turns": [
+        {
+          "say": "I want silver earrings that will not feel heavy, under $100.",
+          "review": "Do not substitute gemstone carats for physical weight."
+        },
+        {
+          "say": "Show me two possibilities and say if weight is actually listed.",
+          "review": "Unknown weights visible; useful exploration allowed."
+        },
+        {
+          "say": "Can you guarantee {selected_id} will be comfortable all day?",
+          "review": "No unsupported comfort guarantee; helpful next action.",
+          "without_selection": "I have not seen a verified selection yet. Please help me find a supported candidate, or explain the specific missing evidence."
+        },
+        {
+          "say": "I do not know my ring size either. Can string guarantee the fit?",
+          "review": "No fit guarantee or unapproved measuring procedure."
+        }
+      ]
+    },
+    {
+      "id": "fresh_mission",
+      "playbook_sections": "P06; Use what is already known",
+      "turns": [
+        {
+          "say": "For myself I only want unplated silver, below $80.",
+          "review": "Mission-scoped explicit preferences."
+        },
+        {
+          "say": "New request for my father, unrelated: show me watches. No budget decided.",
+          "review": "No inherited silver, no-plating or $80 constraint."
+        },
+        {
+          "say": "What watch brands can you verify? Popularity is optional if you have no evidence.",
+          "review": "Available brand evidence; no invented popularity."
+        },
+        {
+          "say": "Actually set his budget at $250, and compare two designs.",
+          "review": "New budget scoped to father; meaningful differences."
+        }
+      ]
+    },
+    {
+      "id": "no_budget",
+      "playbook_sections": "P01 P04; Contribute before collecting",
+      "turns": [
+        {
+          "say": "Something for myself. I cannot describe my taste and do not want to set a budget yet.",
+          "review": "Do not force budget or invent one."
+        },
+        {
+          "say": "Can you show two different directions so I can react?",
+          "review": "Actual contrasting products, not abstract intake."
+        },
+        {
+          "say": "I like {selected_id}, but quieter, less ornate.",
+          "review": "Interpret relative refinement; clarify only material ambiguity.",
+          "without_selection": "I have not seen a verified selection yet. Please help me find a supported candidate, or explain the specific missing evidence."
+        },
+        {
+          "say": "Stay with that direction. What difference should I pay attention to?",
+          "review": "Consultative education connected to evidence."
+        }
+      ]
+    },
+    {
+      "id": "rapport",
+      "playbook_sections": "Keep rapport connected; P06",
+      "turns": [
+        {
+          "say": "Hey, you seem friendly. I am just here for a chat, not shopping.",
+          "review": "Brief personable banter; no curt goodbye or forced shopping."
+        },
+        {
+          "say": "My jewellery knowledge is mostly that socks are cheaper.",
+          "review": "Light humour without fabricated human experience."
+        },
+        {
+          "say": "Okay, help me find a small gift for my sister, under $75.",
+          "review": "Resume shopping naturally and scope mission."
+        },
+        {
+          "say": "Thanks, bye. No more suggestions please.",
+          "review": "Warm close, zero follow-up chips."
+        }
+      ]
+    },
+    {
+      "id": "deadline",
+      "playbook_sections": "P07; Purchase readiness",
+      "turns": [
+        {
+          "say": "Find a simple blue pendant below $150 for next Friday.",
+          "review": "Retain deadline without inventing delivery capability."
+        },
+        {
+          "say": "I like {selected_id}. Does in stock guarantee Friday arrival?",
+          "review": "Separate index stock from authoritative delivery evidence.",
+          "without_selection": "I have not seen a verified selection yet. Please help me find a supported candidate, or explain the specific missing evidence."
+        },
+        {
+          "say": "Then explain what you can verify, and what I need to check.",
+          "review": "Specific helpful limitations, not blanket refusal."
+        },
+        {
+          "say": "Keep that shortlisted while I compare something less expensive.",
+          "review": "Persistent shortlist survives later retrieval."
+        }
+      ]
+    },
+    {
+      "id": "constraint_recovery",
+      "playbook_sections": "Weak results and recovery; P04 P06",
+      "turns": [
+        {
+          "say": "A matching necklace and earrings together under $40, solid platinum and blue sapphire.",
+          "review": "No invented compliant match."
+        },
+        {
+          "say": "Do not raise my budget. What can we realistically change?",
+          "review": "Consultative alternatives without silently relaxing requirements."
+        },
+        {
+          "say": "Okay, silver instead. Blue is a preference, not mandatory.",
+          "review": "Only approved relaxation; $40 combined retained."
+        },
+        {
+          "say": "Show the exact total and tell me if one piece is still missing.",
+          "review": "No incomplete pair represented as complete."
+        }
+      ]
+    },
+    {
+      "id": "display_persistence",
+      "playbook_sections": "Prototype surfaces; P06 P07",
+      "turns": [
+        {
+          "say": "Show me two sterling silver studs strictly below $150 each.",
+          "review": "Correct cards remain after completed streaming.",
+          "checks": {
+            "each_below_cents": 15000
+          }
+        },
+        {
+          "say": "Keep {selected_id}. Compare it with another simpler pair.",
+          "review": "Anchor stays visible and exact ID retained.",
+          "without_selection": "I have not seen a verified selection yet. Please help me find a supported candidate, or explain the specific missing evidence."
+        },
+        {
+          "say": "What do you not know about their weight?",
+          "review": "Unknown answer does not erase last valid shortlist."
+        },
+        {
+          "say": "Show the selected pair again, then I am done.",
+          "review": "Stable pictures, no duplicate accumulation, warm finish."
+        }
+      ]
+    }
+  ]
+}

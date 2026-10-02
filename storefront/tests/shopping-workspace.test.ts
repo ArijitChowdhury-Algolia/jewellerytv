@@ -14,7 +14,20 @@ describe('persistent shopping workspace',()=>{
 
 describe('brief correction and storage boundaries',()=>{
  it('rejects restored invented fields, sources and overlong values',()=>{const fact={id:'f',field:'material',value:'silver',quote:'silver',messageId:'m',status:'confirmed',source:'user-confirmed'};const state={...newShoppingState(),facts:[fact,{...fact,id:'badfield',field:'system'},{...fact,id:'badsource',source:'model'},{...fact,id:'toolong',value:'a'.repeat(301)},{...fact,id:'badmessage',messageId:0}]};expect(restoreShoppingState(JSON.stringify(state)).facts).toEqual([fact])});
- it('explicitly replacing a field removes superseded fact and keeps unrelated facts',()=>{const state=newShoppingState();state.facts=[{id:'old',field:'recipient',value:'wife',quote:'wife',messageId:'m1',status:'confirmed',source:'user-confirmed'},{id:'silver',field:'material',value:'silver',quote:'silver',messageId:'m1',status:'confirmed',source:'user-confirmed'}];state.proposals=[{id:'new',field:'recipient',value:'daughter',quote:'daughter',messageId:'m2',status:'proposed'}];const next=acceptShoppingProposal(state,'new');expect(next.facts.map(f=>f.value)).toEqual(['silver','daughter']);expect(next.dismissedIds).toContain('old');expect(next.proposals).toEqual([])});
+ it('explicitly replacing a field removes superseded fact and keeps unrelated facts',()=>{const state=newShoppingState();state.facts=[{id:'old',field:'recipient',value:'wife',quote:'wife',messageId:'m1',status:'confirmed',source:'user-confirmed'},{id:'silver',field:'material',value:'silver',quote:'silver',messageId:'m1',status:'confirmed',source:'user-confirmed'}];state.proposals=[{id:'new',field:'recipient',value:'daughter',quote:'daughter',messageId:'m2',status:'proposed'}];const next=acceptShoppingProposal(state,'new','old');expect(next.facts.map(f=>f.value)).toEqual(['silver','daughter']);expect(next.dismissedIds).toContain('old');expect(next.proposals).toEqual([])});
  it('accepting a budget correction clears obsolete numeric budget',()=>{const state={...newShoppingState(),budgetCents:30000,proposals:[{id:'new',field:'budget' as const,value:'200 per item',quote:'200 per item',messageId:'m',status:'proposed' as const,scope:'per item'}]};const next=acceptShoppingProposal(state,'new');expect(next.budgetCents).toBeNull();expect(next.facts[0].scope).toBe('per item')});
  it('preserves sequential queued product updates',()=>{const updates=[(s:ReturnType<typeof newShoppingState>)=>pinRecord(s,record('a',20)),(s:ReturnType<typeof newShoppingState>)=>pinRecord(s,record('b',30))];const result=updates.reduce((state,update)=>update(state),newShoppingState());expect(result.products.map(p=>p.product.id)).toEqual(['a','b'])});
+});
+
+it('keeps independent exclusions unless an exact replacement is confirmed',()=>{
+ const state=newShoppingState();state.facts=[{id:'gold',field:'exclusion',value:'no yellow gold',quote:'no yellow gold',messageId:'u1',source:'user-confirmed',status:'confirmed'}];state.proposals=[{id:'heart',field:'exclusion',value:'no hearts',quote:'no hearts',messageId:'u2',status:'proposed'}];
+ expect(acceptShoppingProposal(state,'heart').facts.map(f=>f.value)).toEqual(['no yellow gold','no hearts']);
+});
+it('keeps comparison choices separate from a purchase combination',()=>{
+ const s=newShoppingState();s.compareIds=['a','b'];expect(s.combinationIds).toEqual([]);expect(s.combinationQuantities).toEqual({});
+});
+it('restores unsaved compared records without turning them into favourites',()=>{
+ const s=newShoppingState();const p=pinRecord(s,record('a',15)).products[0].product;
+ const restored=restoreShoppingState(JSON.stringify({...s,selectionRecords:[p],compareIds:['a'],combinationIds:['a'],combinationQuantities:{a:2}}));
+ expect(restored.products).toEqual([]);expect(restored.compareIds).toEqual(['a']);expect(restored.combinationQuantities.a).toBe(2);
 });

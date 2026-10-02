@@ -22,3 +22,6 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+      - name: Evaluation scorer tests
+        run: python3 -m unittest discover -s evaluation -p 'test_*.py'

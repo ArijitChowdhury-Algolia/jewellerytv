@@ -4,3 +4,4 @@
 @media(prefers-reduced-motion:reduce){.concierge-workspace *{scroll-behavior:auto!important;transition:none!important}}
 /* A single explicit mission-reset path clears both chat and shopping state. */
 .concierge-workspace .ais-ChatHeader-clear{display:none}
+@media(min-width:768px){.workspace-sections{display:none}}
