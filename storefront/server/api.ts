@@ -35,7 +35,7 @@ export function createApiHandler(options:ApiOptions){
   const timeout=setTimeout(()=>abort.abort(),180_000);timeout.unref();
   try {
    const host=req.headers.host??'';if((!/^(localhost|127\.0\.0\.1):\d+$/.test(host)&&!cloudHosts.has(host))||(req.headers.origin&&!origins.has(req.headers.origin))||req.headers['sec-fetch-site']==='cross-site'){reply(res,403,{error:'Origin not allowed'});return;}
-   const url=new URL(req.url??'/',`http://${host}`);if(url.search){reply(res,400,{error:'Query parameters are not supported',parameterNames:[...url.searchParams.keys()]});return;}
+   const url=new URL(req.url??'/',`http://${host}`);if(url.search){reply(res,400,{error:'Query parameters are not supported'});return;}
    if(req.method==='GET'&&url.pathname==='/api/health'){reply(res,200,{ok:true,mode:'live'});return;}
    if(req.method==='POST'&&url.pathname==='/api/brief'){
     const input=briefRequestSchema.parse(await body(req));
