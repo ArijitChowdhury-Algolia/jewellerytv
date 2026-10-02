@@ -1,5 +1,6 @@
 import {useEffect,useRef} from 'react';
 import type {ClientSideToolComponentProps} from 'instantsearch-ui-components';
+import {ConversationText} from './ConversationText';
 import {useShopping} from './ShoppingProvider';
 import {workspaceGroups,mayCommitResults} from './workspaceResults';
 /** Product tools hydrate the workspace; conversation gets a short handoff, not duplicate cards. */
@@ -17,5 +18,5 @@ export function WorkspaceResultsBridge({context}:ClientSideToolComponentProps){
  if(!shopping)return <></>;
  if(context.status==='streaming'&&isLatest)return <p className="workspace-handoff" role="status">Putting your choices together…</p>;
  if(!result.groups.length)return <></>;
- return <p className="workspace-handoff">I’ve updated your product workspace. <button onClick={()=>shopping.openWorkspace()}>View products</button></p>;
+ return <div className="workspace-conversation"><ConversationText text={result.intro}/><button className="workspace-product-link" onClick={()=>shopping.openWorkspace()}>View these pieces</button></div>;
 }

@@ -3,6 +3,7 @@ import {Chat,ChatTrigger,SearchIndexToolType,GroupedResultsToolType,DisplayResul
 import type {ChatLayoutOwnProps} from 'instantsearch-ui-components';
 import type {IndexUiState} from 'instantsearch.js';
 import {MessageCircle,ChevronDown} from 'lucide-react';
+import {OptionalSuggestions} from './OptionalSuggestions';
 import {WorkspaceResultsBridge} from './WorkspaceResultsBridge';
 import {AgentResults} from './AgentResults';
 import {ProductCard} from './ProductCard';
@@ -24,7 +25,7 @@ const transport={api:'/api/chat',fetch:async(input:RequestInfo|URL,init?:Request
 }};
 const translations={header:{title:'JTV Jewelry Concierge'}};
 const baselineTools={[SearchIndexToolType]:{layoutComponent:AgentResults}};
-const workspaceTools={...baselineTools,[SearchIndexToolType]:{layoutComponent:()=> <></>},[GroupedResultsToolType]:{layoutComponent:WorkspaceResultsBridge},[DisplayResultsToolType]:{layoutComponent:WorkspaceResultsBridge}};
+const workspaceTools={...baselineTools,algolia_search_for_facet_values:{layoutComponent:()=> <></>,shouldRender:()=>false},[SearchIndexToolType]:{layoutComponent:()=> <></>},[GroupedResultsToolType]:{layoutComponent:WorkspaceResultsBridge},[DisplayResultsToolType]:{layoutComponent:WorkspaceResultsBridge}};
 const searchPageURL=(state:IndexUiState)=>searchURL('/search',state);
 function ChatItem({item}:{item:{objectID:string}}){return <ProductCard item={item}/>;}
 function ChatLayout(props:ChatLayoutOwnProps){
@@ -57,5 +58,5 @@ export const Concierge=forwardRef<ConciergeHandle,{context:()=>Record<string,str
  const combinedContext=useCallback(()=>{try{const value=mergeShoppingContext(context(),shoppingRef.current?encodeShoppingContext(shoppingRef.current.getContext()):{});demoTrace.contextError='';return value}catch(e){demoTrace.contextError=e instanceof Error?e.message:'Shopping context is too large.';throw e}},[context]);
  const promptProps=useMemo(()=>({disabled:!!blocked}),[blocked]);
  useImperativeHandle(ref,()=>({ask:()=>{chat.current?.setOpen(true);chat.current?.setInput('Tell me about this item.');}}),[]);
- return <>{blocked&&<div className="context-status" role="status">{blocked}</div>}<Chat key={shopping?.missionId??'baseline'} ref={chat} transport={transport} context={combinedContext} persistence={false} showReasoning={false} translations={translations} title="JTV Jewelry Concierge" itemComponent={ChatItem} messagesErrorComponent={ChatFailure} tools={shopping?workspaceTools:baselineTools} promptProps={promptProps} getSearchPageURL={searchPageURL} layoutComponent={ChatLayout} emptyComponent={EmptyChat}/><ChatTrigger aria-label="Open jewelry concierge" toggleIconComponent={ConciergeToggle}/></>;
+ return <>{blocked&&<div className="context-status" role="status">{blocked}</div>}<Chat key={shopping?.missionId??'baseline'} ref={chat} transport={transport} context={combinedContext} persistence={false} showReasoning={false} translations={translations} title="JTV Jewelry Concierge" itemComponent={ChatItem} messagesErrorComponent={ChatFailure} suggestionsComponent={OptionalSuggestions} tools={shopping?workspaceTools:baselineTools} promptProps={promptProps} getSearchPageURL={searchPageURL} layoutComponent={ChatLayout} emptyComponent={EmptyChat}/><ChatTrigger aria-label="Open jewelry concierge" toggleIconComponent={ConciergeToggle}/></>;
 });
