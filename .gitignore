@@ -1,0 +1,6 @@
+# Publish the application, not private research, runtime state or account configuration.
+/*
+!/.gitignore
+!/.github/
+!/README.md
+!/storefront/

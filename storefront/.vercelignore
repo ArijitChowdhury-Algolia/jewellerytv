@@ -1,0 +1,12 @@
+node_modules
+.env*
+!.env.example
+.vercel
+evidence
+tests
+playwright-report
+test-results
+
+evaluation/
+__pycache__/
+*.pyc

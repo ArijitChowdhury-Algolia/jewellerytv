@@ -1,0 +1,11 @@
+import {it,expect} from 'vitest';
+import {productURL,agentSearchURL,readAgentConstraints} from '../src/routing';
+import {visibleResultIds} from '../src/resultContext';
+it('preserves original category refinements on exact product navigation',()=>{const url=productURL('MFP256C','/category/rings','?q=opal&f=%7B%7D');expect(url).toContain('/product/MFP256C?');expect(new URL(url,'http://localhost').searchParams.get('category')).toBe('rings');expect(new URL(url,'http://localhost').searchParams.get('q')).toBe('opal');});
+it('keeps every agent search predicate including numeric exclusions',()=>{const constraints={query:'',facetFilters:[['Catalog_ProductType:Ring'],['Inventory_AvailableSkuSizes:7']],numericFilters:['Pricing_ActivePrice>=50','Pricing_ActivePrice<82.99']};const url=agentSearchURL(constraints);expect(readAgentConstraints(url)).toEqual(constraints);expect(new URL(url,'http://localhost').pathname).toBe('/search');});
+it('does not advertise hidden homepage or outside records',()=>{expect(visibleResultIds('/',true,['a','b','c','d','e'])).toEqual(['a','b','c','d']);expect(visibleResultIds('/outside',true,['a'])).toEqual([]);});
+it('does not attach stale results during loading or on product pages',()=>{expect(visibleResultIds('/category/watches',false,['ring'])).toEqual([]);expect(visibleResultIds('/product/MFP256C',true,['other'])).toEqual([]);});
+import {samePriceRange} from '../src/resultContext';
+it('rejects stale numeric price results while matching current refinements',()=>{expect(samePriceRange({'Pricing_ActivePrice':'50:100'},{})).toBe(false);expect(samePriceRange({'Pricing_ActivePrice':'50:100'},{Pricing_ActivePrice:{'>=':[50],'<=':[100]}})).toBe(true);});
+import {agentFilterExpression} from '../src/routing';
+it('expresses agent numeric and facet filters without mixing helper APIs',()=>{expect(agentFilterExpression({facetFilters:[['Catalog_ProductType:Ring'],['Inventory_AvailableSkuSizes:7']],numericFilters:['Pricing_ActivePrice>=50','Pricing_ActivePrice<82.99']})).toBe('(Catalog_ProductType:"Ring") AND (Inventory_AvailableSkuSizes:"7") AND Pricing_ActivePrice>=50 AND Pricing_ActivePrice<82.99');});

@@ -1,0 +1,11 @@
+import {describe,it,expect} from 'vitest';
+import {createApiHandler} from '../server/api';
+import {createServer,request as httpRequest} from 'node:http';
+import type {ApiOptions} from '../server/api';
+async function hosted(options:Partial<ApiOptions>,headers:Record<string,string>){const handler=createApiHandler({appId:'TEST',apiKey:'secret',...options});const server=createServer(handler);await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const port=(server.address() as {port:number}).port;try{return await new Promise<number|undefined>(resolve=>{const req=httpRequest({hostname:'127.0.0.1',port,path:'/api/health',headers},res=>{res.resume();resolve(res.statusCode)});req.end()});}finally{await new Promise<void>(r=>server.close(()=>r()));}}
+describe('hosted API boundary',()=>{
+ it('supports only explicit deployment hosts and matching HTTPS origins',async()=>{expect(await hosted({allowedHosts:['jewellerytv.vercel.app']},{host:'jewellerytv.vercel.app',origin:'https://jewellerytv.vercel.app'})).toBe(200);});
+ it('does not expand local defaults to cloud hosts',async()=>{expect(await hosted({},{host:'jewellerytv.vercel.app'})).toBe(403);});
+ it('rejects origin or forwarded-host spoofing',async()=>{expect(await hosted({allowedHosts:['jewellerytv.vercel.app']},{host:'jewellerytv.vercel.app',origin:'https://evil.test'})).toBe(403);expect(await hosted({allowedHosts:['jewellerytv.vercel.app']},{host:'evil.test','x-forwarded-host':'jewellerytv.vercel.app'})).toBe(403);});
+});
+it('accepts Vercel pre-parsed JSON request bodies without reading an exhausted stream',async()=>{let calls=0;const handler=createApiHandler({appId:'TEST',apiKey:'secret',fetch:async()=>{calls++;return new Response(JSON.stringify({results:[]}))}});const server=createServer((req,res)=>{Object.assign(req,{body:{requests:[{indexName:'prod_catalog',params:{query:'ring'}}]}});void handler(req,res)});await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const port=(server.address() as {port:number}).port;try{const response=await fetch(`http://127.0.0.1:${port}/api/search`,{method:'POST',headers:{'content-type':'application/json'}});expect(response.status).toBe(200);expect(calls).toBe(1)}finally{await new Promise<void>(r=>server.close(()=>r()))}});
