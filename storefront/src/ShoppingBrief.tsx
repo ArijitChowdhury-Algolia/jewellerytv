@@ -1,3 +1,5 @@
+import {createPortal} from 'react-dom';
+import {SlidersHorizontal,RotateCcw} from 'lucide-react';
 import {useRef,useState,type FormEvent} from 'react';
 import {useShopping,uiFact} from './ShoppingProvider';
 import type {BriefFactV2,BriefFactInput,BriefOperation} from '../shared/briefSchema';
@@ -26,7 +28,7 @@ export function editorOperations(facts:readonly BriefFactV2[],fact:BriefFactInpu
 }
 export function initialBriefEditor(f?:BriefFactV2){return {field:f?.field??'budget' as const,draft:f?f.value.kind==='money'?String(f.value.cents/100):briefFactLabel(f):''}}
 export function briefAnnouncement(revision:number,facts:BriefFactV2[],manual:{text:string;revision:number}){if(manual.revision===revision&&manual.text)return manual.text;return facts.length?`Your brief was updated: ${facts.slice(-6).map(briefFactLabel).join('; ')}.`:revision>0?'Your brief is now clear.':''}
-export function ShoppingBrief({busy=false,error:externalError}:{busy?:boolean;error?:string}={}){
+export function ShoppingBrief({busy=false,error:externalError,controlsTarget}:{busy?:boolean;error?:string;controlsTarget?:HTMLElement|null}={}){
  const s=useShopping();const [materialMode,setMaterialMode]=useState('catalogue');const [facetValues,setFacetValues]=useState<string[]>([]);const [editing,setEditing]=useState<string|null>(null);const [field,setField]=useState<BriefFactInput['field']>('budget');const [draft,setDraft]=useState('');const [basis,setBasis]=useState<'total'|'per-item'|'unresolved'>('total');const [operator,setOperator]=useState<'lt'|'lte'>('lte');const [strength,setStrength]=useState<'requirement'|'preference'>('preference');const [scope,setScope]=useState('');const [revision,setRevision]=useState(0);const [error,setError]=useState('');const [announcement,setAnnouncement]=useState({text:'',revision:-1});const trigger=useRef<HTMLElement|null>(null);const addButton=useRef<HTMLButtonElement>(null);
  if(!s)return null;
  const visible=s.brief.facts.filter(f=>f.status==='active'||f.status==='tentative');const selected=visible.find(f=>f.id===editing);const compiled=compileBriefConstraints(s.brief);const facetAttribute=selected?.value.kind==='facet'?selected.value.attribute:field==='material'&&materialMode==='catalogue'?MATERIAL_ATTRIBUTE:'';const hasValue=facetAttribute?facetValues.length>0:!!draft.trim();
@@ -37,8 +39,9 @@ export function ShoppingBrief({busy=false,error:externalError}:{busy?:boolean;er
   if(field==='budget'){if(!/^\d+(\.\d{1,2})?$/.test(draft)||Number(draft)>10000000){setError('Enter a dollar amount with up to two decimal places.');return}fact={...fact,strength:'requirement',value:{kind:'money',cents:Math.round(Number(draft)*100),currency:'USD',operator,basis}}}
   if(s!.applyBriefOperations(editorOperations(s!.brief.facts,fact,selected),revision)){announce('Your brief has been updated.');close()}else setError('Your brief changed. Close this editor and try again.');
  }
- return <section className="conversation-brief" aria-label="Your brief" onKeyDown={e=>{if(e.key==='Escape'&&editing){e.stopPropagation();close()}}}>
-  <div className="cb-heading"><strong>Your brief</strong><button ref={addButton} onClick={()=>open()} aria-expanded={editing==='add'}>Add preference</button>{s.brief.events.length>0&&<button onClick={()=>{if(s.undoBriefEdit())announce('Your last brief change was undone.')}}>Undo</button>}</div>
+ const controls=<div className="cb-controls"><button ref={addButton} onClick={()=>open()} aria-label="Add preference" title="Add a preference" aria-expanded={editing==='add'}><SlidersHorizontal size={18} aria-hidden="true"/><span>Preferences</span></button>{s.brief.events.length>0&&<button aria-label="Undo last preference change" title="Undo last preference change" onClick={()=>{if(s.undoBriefEdit())announce('Your last brief change was undone.')}}><RotateCcw size={18} aria-hidden="true"/><span className="cb-sr">Undo</span></button>}</div>;
+ return <section className={`conversation-brief ${controlsTarget!==undefined&&!visible.length&&!editing&&!busy&&!externalError?'cb-empty':''}`} aria-label="Your brief" onKeyDown={e=>{if(e.key==='Escape'&&editing){e.stopPropagation();close()}}}>
+  {controlsTarget?createPortal(controls,controlsTarget):controlsTarget===undefined?controls:null}
   {!!visible.length&&<div className="cb-chips">{visible.map(f=><button key={f.id} className={f.status==='tentative'?'cb-chip cb-tentative':'cb-chip'} onClick={()=>open(f)} aria-label={`Edit ${briefFactFieldLabel(f)}: ${briefFactLabel(f)}`}><span>{f.status==='tentative'?'To clarify: ':''}{briefFactFieldLabel(f)}: {briefFactLabel(f)}</span>{f.scope.kind==='item'&&<small>{f.scope.key}</small>}</button>)}</div>}
   {busy&&<p className="cb-context" role="status">Updating your brief…</p>}{externalError&&<p className="cb-error" role="alert">{externalError}</p>}
   <span className="cb-sr" role="status" aria-live="polite">{briefAnnouncement(s.brief.revision,visible,announcement)}</span>
