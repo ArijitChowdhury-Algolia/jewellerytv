@@ -20,7 +20,7 @@ No configuration or record in the production index is modified. The native conci
 
 ## Two columns with separate purposes
 
-The conversation column owns guidance and the editable brief. Chips expose focused editors, removal and Undo. The product column appears when there are products to review, or when the shopper explicitly opens retained selections. Discover, Compare, Saved and Combination remain separate views.
+The conversation column owns guidance and the editable brief. Chips expose focused editors, removal and Undo. The desktop product column remains visible from the start, showing a simple empty state until results arrive. Mobile uses Conversation and Products tabs. Discover, Compare, Saved and Combination remain separate views.
 
 Changing a requirement never silently deletes saved pieces. Product checks distinguish conflicts from missing evidence. Occasion and recipient notes do not create product-compliance warnings. A new mission clears its brief and retains selections for deliberate review; it does not delete provider-held conversation history.
 

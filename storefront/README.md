@@ -84,7 +84,7 @@ Rollback consists of stopping the local processes. No index settings, records, p
 
 See [the shopping-brief workflow](docs/shopping-brief.md) for interpretation, scope, retries and query constraints.
 
-The concierge starts with conversation. Its product workspace opens when validated product results arrive, or when the shopper chooses to review retained selections. Discover, Compare, Saved and Combination keep their separate purposes. Only Combination adds quantities and totals, using integer cents.
+The desktop concierge keeps conversation and products in two persistent columns. Before results arrive, the product workspace shows a simple empty state. Mobile switches between Conversation and Products tabs. Discover, Compare, Saved and Combination keep their separate purposes. Only Combination adds quantities and totals, using integer cents.
 
 Your brief lives beside the conversation header as compact editable chips. With brief v2 enabled, clear spoken preferences update automatically before search; ambiguous requirements prompt clarification. Each fact carries scope, source and revision. A later explicit correction replaces only affected facts. Manual edits share the same reducer and compiler, and invalidate an in-flight reply built on an older revision. Removal and Undo remain available. Saved pieces are retained and checked for conflicts rather than silently deleted.
 
