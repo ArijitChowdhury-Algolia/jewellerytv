@@ -22,7 +22,7 @@ describe('chat-side brief and independent selections',()=>{
  });
  it('starts the chat brief without an intake form and keeps preferences out of product work',()=>{
   const chat=renderToStaticMarkup(<ShoppingProvider><ShoppingBrief/></ShoppingProvider>);
-  expect(chat).toContain('Your brief');expect(chat).toContain('Add preference');expect(chat).not.toContain('<input');
+  expect(chat).toContain('Your brief');expect(chat).toContain('Preferences (0)');expect(chat).toContain('aria-expanded="false"');expect(chat).toContain('hidden=""');expect(chat).not.toContain('<input');
   const products=renderToStaticMarkup(<ShoppingProvider><ShoppingWorkspace/></ShoppingProvider>);
   expect(products).not.toContain('Edit preferences');expect(products).not.toContain('Budget (USD)');expect(products).not.toContain('Your brief');
  });

@@ -2,4 +2,7 @@
 
 .conversation-column>.conversation-brief{flex:0 0 auto;max-height:45%;overflow-y:auto}
 
-.conversation-brief.cb-empty{padding:0;border:0;height:0;max-height:0;overflow:visible}.conversation-brief .cb-controls{justify-content:flex-end}.conversation-brief:has(.cb-chips){padding-top:12px}.conversation-brief:has(.cb-editor){padding-top:12px}
+.conversation-brief.cb-empty{padding:0;border:0;height:0;max-height:0;overflow:visible}.conversation-brief .cb-controls{justify-content:flex-end}.conversation-brief:not(.cb-empty):has(.cb-chips){padding-top:12px}.conversation-brief:not(.cb-empty):has(.cb-editor){padding-top:12px}
+
+.cb-panel[hidden]{display:none}.cb-panel-actions{display:flex;align-items:center;gap:6px;margin-bottom:8px}.cb-panel-actions button{display:flex;align-items:center;gap:6px;border:0;padding:8px}.cb-panel-actions .cb-close{margin-left:auto}.cb-count{font:inherit;font-variant-numeric:tabular-nums}.cb-chevron{transition:transform .15s}.cb-chevron-open{transform:rotate(180deg)}
+@media(prefers-reduced-motion:reduce){.cb-chevron{transition:none}}
