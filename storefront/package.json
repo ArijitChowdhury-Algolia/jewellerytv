@@ -8,10 +8,11 @@
     "dev:web": "vite --host localhost --port 5173 --strictPort",
     "dev:api": "tsx watch server/index.ts",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && npm run check:server && vite build",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "snapshot": "tsx server/snapshot.ts"
+    "snapshot": "tsx server/snapshot.ts",
+    "check:server": "node scripts/check-server-runtime.mjs"
   },
   "dependencies": {
     "algoliasearch": "5.59.0",
