@@ -1,5 +1,5 @@
 /** Bounded metadata-only trace: never shopper text, tool payloads or private reasoning. */
-export type ClientTrace={requestId:string;turnId:string;missionId?:string;startedAt:string;headersMs?:number;firstUsefulOutputMs?:number;streamCompletionMs?:number;termination?:'finished'|'cancelled'|'failed';status?:number;server?:unknown;events:{type:string;ms:number;toolCallId?:string;revision?:number;count?:number;outcome?:'loaded'|'failed'}[]};
+export type ClientTrace={requestId:string;turnId:string;missionId?:string;startedAt:string;headersMs?:number;firstUsefulOutputMs?:number;streamCompletionMs?:number;termination?:'finished'|'cancelled'|'failed';status?:number;server?:unknown;events:{type:string;ms:number;toolCallId?:string;toolKind?:'search'|'display'|'other';revision?:number;count?:number;outcome?:'loaded'|'failed'}[]};
 export const clientTraces:ClientTrace[]=[];
 export function beginTrace(turnId:string,missionId?:string){const trace:ClientTrace={requestId:crypto.randomUUID(),turnId,missionId,startedAt:new Date().toISOString(),events:[]};traceStarts.set(trace,performance.now());clientTraces.push(trace);if(clientTraces.length>50)clientTraces.shift();return trace}
 export function observeTrace(trace:ClientTrace,event:Record<string,unknown>,elapsed:number){
@@ -7,7 +7,7 @@ export function observeTrace(trace:ClientTrace,event:Record<string,unknown>,elap
  if((type==='text-delta'||(type==='tool-input-available'&&event.toolName==='algolia_grouped_results'))&&trace.firstUsefulOutputMs===undefined)trace.firstUsefulOutputMs=Math.round(elapsed);
  if(type==='error')trace.termination='failed';
  if(type==='finish'){trace.streamCompletionMs=Math.round(elapsed);if(trace.termination!=='failed')trace.termination='finished'}
- if(['start','finish','error','tool-input-start','tool-input-available','tool-output-available','tool-output-error','data-guardrail-violation','data-shopping-brief'].includes(type)&&trace.events.length<100)trace.events.push({type,ms:Math.round(elapsed),...(typeof event.toolCallId==='string'?{toolCallId:event.toolCallId}:{})});
+ if(['start','finish','error','tool-input-start','tool-input-available','tool-output-available','tool-output-error','data-guardrail-violation','data-shopping-brief'].includes(type)&&trace.events.length<100)trace.events.push({type,ms:Math.round(elapsed),...(typeof event.toolCallId==='string'?{toolCallId:event.toolCallId}:{}),...(typeof event.toolName==='string'?{toolKind:(event.toolName.startsWith('algolia_search_')?'search':event.toolName==='algolia_grouped_results'||event.toolName==='algolia_display_results'?'display':'other') as 'search'|'display'|'other'}:{})});
  if(type==='data-telemetry')trace.server=event.data;
 }
 
@@ -35,3 +35,5 @@ export function markWorkspaceImage(binding:WorkspaceTraceBinding,identity:string
  const trace=matchingWorkspaceTrace(binding);if(!trace)return;const marks=imageMarks.get(trace)??new Set<string>();if(marks.has(identity)||marks.size>=100)return;marks.add(identity);imageMarks.set(trace,marks);
  recordWorkspaceEvent(binding,'workspace_image',{outcome},now);
 }
+
+export function traceElapsed(trace:ClientTrace){const start=traceStarts.get(trace);return trace.streamCompletionMs??(start===undefined?0:Math.max(0,performance.now()-start))}

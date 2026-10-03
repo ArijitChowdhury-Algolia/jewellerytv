@@ -92,6 +92,8 @@ Set server-only `BRIEF_V2_ENABLED=true` and `JTV_BRIEF_AGENT_ID` to enable orche
 
 Supported exact catalogue facets and numeric budgets become safe filters. Recipient, occasion, subjective wording and unresolved item scopes remain consultation context. A total budget bounds individual results but only exact combination arithmetic establishes whether selected pieces fit together. Missing evidence stays unknown.
 
+While a reply is being prepared, a compact status replaces the default skeleton. An optional disclosure lists observed activity, and the elapsed timer is not an ETA. The header line indicates ongoing work without claiming a completion percentage. Empty product tabs use the banner headline with a tab-specific hint; actual products replace it.
+
 Development diagnostics record bounded metadata: interpretation/verification, upstream headers, stream events, completion, workspace rendering and image outcomes. Tool spans are observed stream intervals, not provider execution measurements. Provider-internal timing and usage may not be exposed. Shopper text, credentials and private reasoning are excluded from these timing records.
 
 `?experience=baseline` compares layouts only, not frozen agent behavior. See `evaluation/README.md` for conversation evaluation and its limits. Cloud prompts are managed separately and must be read back and tested before release.
