@@ -55,3 +55,24 @@ Repeat live families to measure variance. Hold out new wording, different recipi
 For selected turns, save screenshots after the completed reply and after another turn. Confirm the last valid shortlist survives a text-only answer, blocked response and simulated transport failure. Confirm product IDs/variants survive pin, compare, remove and mission reset. Check mobile as well as desktop, keyboard selection, readable prices and accurate combined totals. Rendered cards are the evidence; tool calls alone do not pass this gate.
 
 The published runner includes its own transport/history helpers. Supply ALGOLIA_APP_ID and ALGOLIA_SEARCH_API_KEY as environment variables or in the repository-root .env.local. Private baseline snapshots and live run outputs are ignored. No credentials are needed for scorer tests or dry runs.
+
+## Brief v2 live journeys
+
+`brief_v2_live.py` exercises the revisioned API with eight four-turn shopping journeys. It reconstructs AI SDK message history from observed text and completed tools. It never fabricates a tool result to continue a conversation.
+
+Start the configured local storefront, then run from the repository root:
+
+```sh
+python3 storefront/evaluation/brief_v2_live.py --mode candidate --repeat-critical \
+  --workers 2 --out analysis/brief-v2/candidate-run
+```
+
+The default candidate endpoint is `http://localhost:5173/api/chat`. Override it with `--candidate-url` for an isolated diagnostic proxy. A candidate proxy run needs no local credential file. Direct baseline mode reads `ALGOLIA_APP_ID` and `ALGOLIA_SEARCH_API_KEY` from the environment or the optional root `.env.local`; `--baseline-url` instead uses a configured local proxy. `--mode both` runs both variants. Worker count is bounded to one through three.
+
+Each run stores request/response evidence, phase timings, source hashes and journey summaries under the requested private output directory. Missing private configuration files are marked `not_available`; a source-file hash is not a live agent readback. Freeze the published model and agent configuration separately before comparing runs. Never combine changed configurations into one clean pass.
+
+When present, `resolvedSearchParameters` records the native `data-tool-output-metadata` event’s `com.algolia/resolved-search-params` values. These are runtime evidence of the filters actually passed to search.
+
+Review both `response` and `groupedIntros`: the latter contains the conversation text delivered through grouped results. Mechanical checks cover grouped IDs against observed catalogue records and candidate prices against active typed budget facts. Prices use exact decimal cents; missing or fractional-cent evidence stays unknown. Baseline responses have no typed brief, so the candidate price check is not a shared baseline score. Total-budget item bounds also do not prove that a proposed combination fits: review explicit component IDs and sums separately.
+
+Create a file named `STOP` inside the run directory to stop after active turns finish. Remove it and use `--resume` to reuse completed evidence; resumed summaries mark reused turns explicitly. An already recorded failed turn stays failed, so investigate it and use a fresh directory for its retest. HTTP success alone does not establish semantic correctness, resolved filter parameters, visual behaviour or conversation quality.

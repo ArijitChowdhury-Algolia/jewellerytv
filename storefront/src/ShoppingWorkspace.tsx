@@ -1,25 +1,12 @@
-import {useEffect,useState} from 'react';
 import {ProductWorkspace} from './ProductWorkspace';
 import {useShopping} from './ShoppingProvider';
-import {BRIEF_FIELDS,type BriefField} from '../shared/shopping';
 import './shopping-workspace.css';
-const money=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
-export function ShoppingWorkspace({onSend,onReset}:{onSend?:(message:string)=>void;onReset?:()=>void}){
- const s=useShopping();const [budget,setBudget]=useState('');const [scope,setScope]=useState<'total'|'per-item'>('total');const [budgetError,setBudgetError]=useState('');const [editing,setEditing]=useState<string|null>(null);const [draft,setDraft]=useState('');const [replacements,setReplacements]=useState<Record<string,string>>({});const [manual,setManual]=useState('');const [field,setField]=useState<BriefField>('other');
- useEffect(()=>{setBudget(s?.budgetCents==null?'':(s.budgetCents/100).toFixed(2));setScope(s?.budgetScope??'total')},[s?.budgetCents,s?.budgetScope,s?.missionId]);
+/** Product work lives here; the editable brief stays alongside the conversation. */
+export function ShoppingWorkspace({onSend}:{onSend?:(message:string)=>void;onReset?:()=>void}){
+ const s=useShopping();
  if(!s)return null;
- function saveBudget(e:React.FormEvent){e.preventDefault();if(!budget.trim()){setBudgetError('Enter an amount, or use Clear budget to remove the limit.');return}if(!/^\d+(\.\d{1,2})?$/.test(budget)||Number(budget)>10000000){setBudgetError('Enter a valid dollar amount with up to two decimal places.');return}s!.setBudget(Math.round(Number(budget)*100),scope);setBudgetError('')}
  return <aside className="shopping-workspace" aria-label="Your shopping workspace">
   {s.error&&<p className="workspace-error" role="alert">{s.error}</p>}
   <ProductWorkspace onAsk={onSend}/>
-  {(s.facts.length>0||s.budgetCents!==null)&&<section className="brief-summary" aria-label="Your preferences"><h3>Your preferences</h3><ul>{s.facts.map(f=><li key={f.id}>{f.value}{f.scope?` · ${f.scope}`:''}</li>)}{s.budgetCents!==null&&<li>{money(s.budgetCents)} {s.budgetScope==='total'?'together':'per item'}</li>}</ul></section>}
-  <details className="shopping-brief"><summary>{s.proposals.length?`Review ${s.proposals.length} suggested update${s.proposals.length>1?'s':''}`:'Edit preferences'}</summary><p className="workspace-note">Optional corrections. You can keep talking to the concierge instead.</p>
-  {s.facts.map(f=><div className="brief-fact" key={f.id}>{editing===f.id?<form onSubmit={e=>{e.preventDefault();if(draft.trim()){s.editFact(f.id,draft);setEditing(null)}}}><label>{f.field}<input maxLength={300} value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/></label><button type="submit">Save preference</button><button type="button" onClick={()=>setEditing(null)}>Cancel</button></form>:<><span><b>{f.field}</b>: {f.value}</span><div><button onClick={()=>{setEditing(f.id);setDraft(f.value)}} aria-label={`Edit ${f.field}: ${f.value}`}>Edit</button><button onClick={()=>s.removeFact(f.id)} aria-label={`Remove preference ${f.value}`}>Remove</button></div></>}</div>)}
-  {!s.facts.length&&<p className="workspace-note">Nothing saved here yet.</p>}
-  {s.proposals.map(p=><div className="brief-proposal" key={p.id}><strong>Did I understand this?</strong>{s.facts.some(f=>f.field===p.field)&&<label>How should this update your brief?<select value={replacements[p.id]||''} onChange={e=>setReplacements(r=>({...r,[p.id]:e.target.value}))}><option value="">Add alongside existing preferences</option>{s.facts.filter(f=>f.field===p.field).map(f=><option key={f.id} value={f.id}>Replace: {f.value}</option>)}</select></label>}<p>{p.field}: {p.value}{p.scope?` (${p.scope})`:''}</p>{p.field==='budget'&&s.budgetCents!==null&&<p className="workspace-note">Accepting replaces your saved {money(s.budgetCents)} {s.budgetScope} budget. Enter the new amount below to calculate remaining budget.</p>}<blockquote>“{p.quote}”</blockquote><div><button onClick={()=>s.acceptProposal(p.id,replacements[p.id]||undefined)}>{replacements[p.id]?'Confirm replacement':'Yes, keep this'}</button><button onClick={()=>s.rejectProposal(p.id)}>Not quite</button></div></div>)}
-  <form className="manual-brief" onSubmit={e=>{e.preventDefault();if(manual.trim()){s.addFact(field,manual);setManual('')}}}><label>Preference type<select value={field} onChange={e=>setField(e.target.value as BriefField)}>{BRIEF_FIELDS.map(f=><option key={f} value={f}>{f}</option>)}</select></label><label>Add a preference<input value={manual} maxLength={300} onChange={e=>setManual(e.target.value)} placeholder="Something important to you"/></label><button type="submit" disabled={!manual.trim()}>Add preference</button></form>
-  <form className="budget-form" onSubmit={saveBudget}><label>Budget (USD)<input inputMode="decimal" placeholder={s.budgetCents===null?'Add a limit':(s.budgetCents/100).toFixed(2)} value={budget} onChange={e=>setBudget(e.target.value)} aria-describedby="budget-help"/></label><label>Applies to<select value={scope} onChange={e=>setScope(e.target.value as typeof scope)}><option value="total">Whole combination</option><option value="per-item">Each item</option></select></label><button type="submit">Save budget</button>{s.budgetCents!==null&&<button type="button" onClick={()=>{s.setBudget(null,scope);setBudget('')}}>Clear budget</button>}<small id="budget-help">{s.budgetCents!==null?`Saved: ${money(s.budgetCents)} ${s.budgetScope==='total'?'total':'per item'}. `:''}Item prices; other charges may apply.</small>{budgetError&&<p role="alert" className="workspace-error">{budgetError}</p>}</form>
-  </details>
-
- </aside>
+ </aside>;
 }

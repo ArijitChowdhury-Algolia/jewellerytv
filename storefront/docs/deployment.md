@@ -18,7 +18,9 @@ Repository: https://github.com/ArijitChowdhury-Algolia/jewellerytv. Vercel proje
 
 Set ALGOLIA_APP_ID, ALGOLIA_SEARCH_API_KEY and APP_ALLOWED_HOSTS in Production and Preview. APP_ALLOWED_HOSTS includes jewellerytv.vercel.app. The function also trusts the exact Vercel-provided deployment and production hostnames. It does not trust arbitrary forwarded-host values.
 
-Optional JTV_BRIEF_AGENT_ID identifies a dedicated deployed brief extractor. If unset, automatic proposals are unavailable with a visible explanation; manual shopping-brief editing and the main concierge still work. No raw agent snapshot is needed in the deployment.
+Set BRIEF_V2_ENABLED=true and JTV_BRIEF_AGENT_ID together to enable the published brief interpreter. When enabled, interpreter failures stop the affected turn with a recoverable retry; they do not silently skip preference updates. JTV_CONCIERGE_AGENT_ID optionally routes to an isolated published concierge candidate for validation. Omit it to use the existing main agent. No raw agent snapshot belongs in the deployment.
+
+Rollback: redeploy the previous protected deployment and restore its environment values. Disabling BRIEF_V2_ENABLED restores the legacy API route but also removes automatic same-turn brief enforcement; do not present that mode as equivalent. Preserve per-tab saved state and private evaluation evidence.
 
 Never expose credentials in VITE variables, commit .env files, or upload local research/evidence. The application uses process.env in the cloud. Local startup retains its parent .env.local fallback.
 

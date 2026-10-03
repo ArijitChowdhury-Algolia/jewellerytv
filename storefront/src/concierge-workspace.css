@@ -7,3 +7,7 @@
 @media(min-width:768px){.workspace-sections{display:none}}
 @media(min-width:1024px){.concierge-workspace.concierge-panel{width:min(1440px,calc(100vw - 48px))}.concierge-workspace .conversation-column{flex-basis:36%}}
 .workspace-conversation p{line-height:1.65;margin:0 0 14px;white-space:pre-line}.workspace-product-link{border:0;background:transparent;color:var(--blue);text-decoration:underline;padding:8px 0;min-height:44px}.optional-suggestions{font-size:13px;margin-top:12px;color:var(--muted)}.optional-suggestions summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.optional-suggestions div{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.optional-suggestions button{border:0;background:#f2f6f8;border-radius:4px;padding:8px 12px;min-height:44px;text-align:left;color:var(--text)}
+.concierge-workspace.conversation-first{width:min(600px,calc(100vw - 48px))}.concierge-workspace.conversation-first .conversation-column{flex:1;border-right:0}.concierge-workspace .review-saved{min-height:44px;border:0;background:transparent;color:var(--blue);padding:8px 16px}.concierge-header .shopping-brief-v2{border-bottom:1px solid var(--line)}
+@media(max-width:767px){.concierge-workspace.conversation-first{width:100%}}
+
+.concierge-header .new-conversation{min-height:44px;padding:8px 12px}

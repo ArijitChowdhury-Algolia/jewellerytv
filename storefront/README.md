@@ -37,19 +37,23 @@ flowchart LR
   State --> Context[Bounded per-turn context]
   Detail --> Context
   Context --> Chat[InstantSearch Chat]
-  Chat --> Stream[Local streaming API]
+  Chat --> Stream[Validated streaming API]
+  Stream --> Interpret[Interpret and verify latest preferences]
+  Interpret --> Brief[Revisioned shopping brief]
+  Brief --> Compile[Compile supported query-time constraints]
+  Compile --> Agent
   Search --> Catalogue[Algolia production catalogue family]
   Product --> Catalogue
-  Stream --> Agent[Existing published Agent Studio concierge]
+  Agent[Published Agent Studio concierge]
   Agent --> Catalogue
   Agent --> Cards[Curated IDs and explanations]
   Cards --> Workspace[Discover / Compare / Saved / Combination]
   Workspace --> Shopper
-  Workspace --> Session[Per-tab shortlist and confirmed brief]
+  Workspace --> Session[Per-tab selections and revisioned brief]
   Session --> Context
 ```
 
-All API upstream hosts, routes and indices are fixed/allowlisted. Search analytics, click analytics and A/B testing are disabled. The main concierge uses the existing agent completion endpoint. Optional brief proposals use a separately configured extractor agent. No administrative write endpoint is exposed.
+All API upstream hosts, routes and indices are fixed/allowlisted. Search analytics, click analytics and A/B testing are disabled. The main concierge uses the existing agent completion endpoint. When BRIEF_V2_ENABLED=true, a dedicated interpreter updates and verifies the brief before the concierge can search. Consequential ambiguity returns a clarification without a catalogue search. Supported requirements become query-time constraints; the index configuration remains untouched. No administrative write endpoint is exposed.
 
 Product facts come from the connected catalogue and may differ from JTV's website. Prices, sizes and availability are not checkout confirmation. The demo omits payments, accounts, auctions, TV streaming and editorial search. Secondary navigation identifies these boundaries explicitly. Saved pieces and a shopper-confirmed brief belong to the client shopping workspace, not a JTV account.
 
@@ -78,10 +82,16 @@ Rollback consists of stopping the local processes. No index settings, records, p
 
 ## Shopping workspace
 
-The default concierge now opens beside a persistent shopping area. Use product hearts to save up to 12 exact catalogue records, select up to three alternatives in Compare, or separately build a Combination with quantities and a total or per-item USD budget. Curated discoveries and product previews appear in the right panel; chat retains the agent’s conversational introduction and questions. Totals use integer cents; missing prices remain unknown. The shortlist and confirmed brief persist in this tab's session storage; a new shopping mission clears both. Recorded prices require refresh before purchase.
+See [the shopping-brief workflow](docs/shopping-brief.md) for interpretation, scope, retries and query constraints.
 
-Confirm, edit or remove preferences in the brief. Model-generated proposals require a matching verbatim current-mission user quote and explicit shopper confirmation. Quotes establish provenance, not guaranteed interpretation. Scope is retained. Full quotes stay local; only compact confirmed facts and provenance IDs enter bounded per-turn context. Oversized context blocks a request visibly rather than dropping constraints.
+The concierge starts with conversation. Its product workspace opens when validated product results arrive, or when the shopper chooses to review retained selections. Discover, Compare, Saved and Combination keep their separate purposes. Only Combination adds quantities and totals, using integer cents.
 
-Automatic proposals require a dedicated published extraction agent configured from `../agent/config/brief-extractor.spec.json`, with its ID in server-only `JTV_BRIEF_AGENT_ID`. Without it, chat and manual preferences still work; the UI reports that automatic notes could not update. Never put provider secrets in Vite variables. The extractor is an additional model call, bounded independently, with memory/cache/analytics off. It has no search or write tools.
+Your brief lives beside the conversation header as compact editable chips. With brief v2 enabled, clear spoken preferences update automatically before search; ambiguous requirements prompt clarification. Each fact carries scope, source and revision. A later explicit correction replaces only affected facts. Manual edits share the same reducer and compiler, and invalidate an in-flight reply built on an older revision. Removal and Undo remain available. Saved pieces are retained and checked for conflicts rather than silently deleted.
 
-For the previous narrow layout, open with `?experience=baseline`. This is a UI comparison switch, not a frozen remote agent version. See `evaluation/README.md` for the versioned scenario suite, bounded live runner, human rubric and explicit test limits. Latest implementation evidence: `../docs/workspace/concierge-workspace/verification.md`.
+Set server-only `BRIEF_V2_ENABLED=true` and `JTV_BRIEF_AGENT_ID` to enable orchestration. The interpreter must implement INTERPRET, VERIFY and CLARIFY JSON contracts and have no configured search/write tools. Its failure stops the affected turn with retry rather than searching with an unapplied change. The separate verification pass reduces interpretation errors but cannot guarantee semantic accuracy. Keep the feature disabled for the legacy chat route.
+
+Supported exact catalogue facets and numeric budgets become safe filters. Recipient, occasion, subjective wording and unresolved item scopes remain consultation context. A total budget bounds individual results but only exact combination arithmetic establishes whether selected pieces fit together. Missing evidence stays unknown.
+
+Development diagnostics record bounded metadata: interpretation/verification, upstream headers, stream events, completion, workspace rendering and image outcomes. Tool spans are observed stream intervals, not provider execution measurements. Provider-internal timing and usage may not be exposed. Shopper text, credentials and private reasoning are excluded from these timing records.
+
+`?experience=baseline` compares layouts only, not frozen agent behavior. See `evaluation/README.md` for conversation evaluation and its limits. Cloud prompts are managed separately and must be read back and tested before release.
