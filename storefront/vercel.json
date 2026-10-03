@@ -3,11 +3,30 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/**/*.ts": { "maxDuration": 180 } },
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 180
+    }
+  },
   "rewrites": [
-    { "source": "/product/:path*", "destination": "/index.html" },
-    { "source": "/category/:path*", "destination": "/index.html" },
-    { "source": "/search", "destination": "/index.html" },
-    { "source": "/outside", "destination": "/index.html" }
-  ]
+    {
+      "source": "/product/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/category/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/search",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/outside",
+      "destination": "/index.html"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }

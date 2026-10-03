@@ -2,6 +2,12 @@
 
 Repository: https://github.com/ArijitChowdhury-Algolia/jewellerytv. Vercel project: algolia/jewellerytv. Production alias: jewellerytv.vercel.app.
 
+## Deployment authorization
+
+Work locally by default. A GitHub check-in, checkpoint, code fix or successful CI run does not authorize deployment. Deploy to Vercel only when Arijit explicitly requests it for that release. This applies to production and preview deployments.
+
+Git-triggered deployments are disabled by `git.deploymentEnabled: false` in `vercel.json`, following [Vercel’s Git configuration documentation](https://vercel.com/docs/project-configuration/git-configuration). The project currently has no Git integration connected. Keep CI verification-only and preserve Vercel Authentication on all deployments. Manual CLI deployment remains available for an explicitly authorized release.
+
 ## Project configuration
 
 - Root directory: storefront

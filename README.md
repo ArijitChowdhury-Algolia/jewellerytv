@@ -36,6 +36,8 @@ npm run build
 
 [Application runbook](storefront/README.md) · [Deployment guide](storefront/docs/deployment.md)
 
+Work locally by default. Vercel deployment requires an explicit request for each release. Git-triggered deployments are disabled; pushing to GitHub or checkpointing does not deploy the app.
+
 GitHub Actions runs type checks, tests and the build. Browser regression source is included; live model tests are separate and consume the connected agent's usage.
 
 ## Boundaries
