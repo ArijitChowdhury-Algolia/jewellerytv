@@ -3,6 +3,7 @@ import {Chat,ChatTrigger,SearchIndexToolType,GroupedResultsToolType,DisplayResul
 import type {ChatLayoutOwnProps} from 'instantsearch-ui-components';
 import type {IndexUiState} from 'instantsearch.js';
 import {MessageCircle,ChevronDown,MessageSquarePlus} from 'lucide-react';
+import {ReplyActivity} from './ReplyActivity';
 import {OptionalSuggestions} from './OptionalSuggestions';
 import {WorkspaceResultsBridge} from './WorkspaceResultsBridge';
 import {AgentResults} from './AgentResults';
@@ -13,7 +14,7 @@ import {ShoppingWorkspace} from './ShoppingWorkspace';
 import {ShoppingBrief} from './ShoppingBrief';
 import {createConciergeTransport} from './conciergeTransport';
 import {createBriefState} from '../shared/briefState';
-import {responseBindings,clientTraces} from './telemetry';
+import {responseBindings} from './telemetry';
 import {encodeShoppingContext,mergeShoppingContext} from './workspaceContext';
 import './shopping-workspace.css';
 import './concierge-workspace.css';
@@ -28,15 +29,15 @@ function ChatLayout(props:ChatLayoutOwnProps){
  const [briefControls,setBriefControls]=useState<HTMLDivElement|null>(null);
  const shopping=useShopping();const [section,setSection]=useState<'conversation'|'shopping'>('conversation');
  const shown=useRef(shopping?.displayRequest);useEffect(()=>{if(shopping?.displayRequest!==shown.current){shown.current=shopping?.displayRequest;setSection('shopping')}},[shopping?.displayRequest]);
- const [resetting,setResetting]=useState(false);const [sendError,setSendError]=useState('');const awaiting=props.status==='streaming'||props.status==='submitted';const currentUser=props.messages.filter(m=>m.role==='user').at(-1)?.id;const trace=[...clientTraces].reverse().find(t=>t.turnId===currentUser);const updatingBrief=awaiting&&!trace?.events.some(e=>e.type==='data-shopping-brief');
+ const [resetting,setResetting]=useState(false);const [sendError,setSendError]=useState('');const awaiting=props.status==='streaming'||props.status==='submitted';
  const reset=()=>{props.stop();props.clearMessages?.();shopping?.resetMission();setResetting(false);setSection('conversation')};
  if(!props.open)return <></>;
  return <aside className={`concierge-panel ${shopping?'concierge-workspace':''} ${props.maximized?'maximized':''}`} aria-label="Jewelry buying concierge">
- <div className="concierge-header">{props.headerComponent}<div className="concierge-header-actions"><button className="new-conversation" aria-label="New conversation" title="New conversation" onClick={()=>setResetting(true)}><MessageSquarePlus size={18} aria-hidden="true"/><span>New conversation</span></button>{shopping&&<div ref={setBriefControls} className="brief-header-controls"/>}</div></div>
+ <div className="concierge-header" data-working={awaiting}>{props.headerComponent}<div className="concierge-header-actions"><button className="new-conversation" aria-label="New conversation" title="New conversation" onClick={()=>setResetting(true)}><MessageSquarePlus size={18} aria-hidden="true"/><span>New conversation</span></button>{shopping&&<div ref={setBriefControls} className="brief-header-controls"/>}</div></div>
  {resetting&&<div className="mission-reset" role="alert"><p>Start fresh? Your shopping brief will be cleared. Saved pieces will stay for you to review.</p><button onClick={reset}>Start a new mission</button><button onClick={()=>setResetting(false)}>Keep shopping</button></div>}
  {shopping&&<nav className="workspace-sections" aria-label="Concierge sections"><button aria-pressed={section==='conversation'} onClick={()=>setSection('conversation')}>Conversation</button><button aria-pressed={section==='shopping'} onClick={()=>setSection('shopping')}>Products</button></nav>}
  <div className="concierge-workspace-body" data-section={section}>
- <section className="conversation-column" aria-label="Conversation">{shopping&&<ShoppingBrief busy={updatingBrief} controlsTarget={briefControls}/>}<div className="concierge-messages">{sendError&&<p className="brief-error" role="alert">{sendError}</p>}{props.messagesComponent}</div><div className="concierge-prompt">{props.promptComponent}</div></section>
+ <section className="conversation-column" aria-label="Conversation">{shopping&&<ShoppingBrief controlsTarget={briefControls}/>}<div className="concierge-messages">{sendError&&<p className="brief-error" role="alert">{sendError}</p>}{props.messagesComponent}</div><div className="concierge-prompt">{props.promptComponent}</div></section>
  {shopping&&<section className="shopping-column" aria-label="Your shopping workspace">
  <ShoppingWorkspace onSend={text=>{setSection('conversation');if(demoTrace.contextError){setSendError(demoTrace.contextError);return}setSendError('');void props.sendMessage({text}).catch(e=>setSendError(e instanceof Error?e.message:'Your message could not be sent.'))}} onReset={()=>setResetting(true)}/>
  </section>}
@@ -56,5 +57,5 @@ export const Concierge=forwardRef<ConciergeHandle,{context:()=>Record<string,str
  const transport=useMemo(()=>createConciergeTransport(()=>({enabled:enabledRef.current===true,getBrief:()=>shoppingRef.current?.getBrief()??baselineBrief.current,accept:(next,base,mission)=>{if(shoppingRef.current)return shoppingRef.current.acceptServerBrief(next,base,mission);if(baselineBrief.current.missionId!==mission||baselineBrief.current.revision!==base)return false;baselineBrief.current=next;return true},onBinding:binding=>{responseBindings.set(binding.turnId,binding);if(responseBindings.size>100)responseBindings.delete(responseBindings.keys().next().value!);}})),[]);
  const promptProps=useMemo(()=>({disabled:!!blocked||v2Enabled===undefined}),[blocked,v2Enabled]);
  useImperativeHandle(ref,()=>({ask:()=>{chat.current?.setOpen(true);chat.current?.setInput('Tell me about this item.');}}),[]);
- return <>{blocked&&<div className="context-status" role="status">{blocked}</div>}<Chat key={shopping?.missionId??'baseline'} ref={chat} transport={transport} context={combinedContext} persistence={false} showReasoning={false} translations={translations} title="JTV Jewelry Concierge" itemComponent={ChatItem} messagesErrorComponent={ChatFailure} suggestionsComponent={OptionalSuggestions} tools={shopping?workspaceTools:baselineTools} promptProps={promptProps} getSearchPageURL={searchPageURL} layoutComponent={ChatLayout} emptyComponent={EmptyChat}/><ChatTrigger aria-label="Open jewelry concierge" toggleIconComponent={ConciergeToggle}/></>;
+ return <>{blocked&&<div className="context-status" role="status">{blocked}</div>}<Chat key={shopping?.missionId??'baseline'} ref={chat} transport={transport} context={combinedContext} persistence={false} showReasoning={false} translations={translations} title="JTV Jewelry Concierge" itemComponent={ChatItem} messagesErrorComponent={ChatFailure} loaderComponent={ReplyActivity} suggestionsComponent={OptionalSuggestions} tools={shopping?workspaceTools:baselineTools} promptProps={promptProps} getSearchPageURL={searchPageURL} layoutComponent={ChatLayout} emptyComponent={EmptyChat}/><ChatTrigger aria-label="Open jewelry concierge" toggleIconComponent={ConciergeToggle}/></>;
 });

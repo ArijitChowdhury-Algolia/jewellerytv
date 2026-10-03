@@ -12,3 +12,10 @@
 .pw-grid:not(:has(.pw-direction:not(:empty))) .pw-direction,.pw-grid:not(:has(.pw-why:not(:empty))) .pw-why{display:none}
 .pw-grid:not(:has(.pw-direction:not(:empty))),.pw-grid:not(:has(.pw-why:not(:empty))){--card-rows:6}
 .pw-grid:not(:has(.pw-direction:not(:empty))):not(:has(.pw-why:not(:empty))){--card-rows:5}
+
+/* Brand welcome is only an empty-state treatment; actual pieces take its place. */
+.shopping-column{display:flex;flex-direction:column}.concierge-workspace .shopping-workspace{flex:1;display:flex;flex-direction:column}.product-workspace{flex:1;display:flex;flex-direction:column}.pw-discover,.pw-saved,.pw-selection{flex:1;display:flex;flex-direction:column}
+.pw-empty-brand{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;padding:32px 16px;text-align:center}
+.pw-empty-brand h2{font-size:clamp(24px,2.4vw,34px);line-height:1.2;letter-spacing:-.02em;margin:0 0 18px;font-weight:700;max-width:22ch;color:var(--text)}
+.pw-empty-brand p{font-size:15px;line-height:1.6;max-width:34ch;margin:0;color:var(--muted)}
+@media(max-width:767px){.pw-empty-brand{padding:24px 8px}.pw-empty-brand h2{font-size:28px}}
