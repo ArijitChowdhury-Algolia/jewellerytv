@@ -30,13 +30,13 @@ function ChatLayout(props:ChatLayoutOwnProps){
  const [resetting,setResetting]=useState(false);const [sendError,setSendError]=useState('');const awaiting=props.status==='streaming'||props.status==='submitted';const currentUser=props.messages.filter(m=>m.role==='user').at(-1)?.id;const trace=[...clientTraces].reverse().find(t=>t.turnId===currentUser);const updatingBrief=awaiting&&!trace?.events.some(e=>e.type==='data-shopping-brief');
  const reset=()=>{props.stop();props.clearMessages?.();shopping?.resetMission();setResetting(false);setSection('conversation')};
  if(!props.open)return <></>;
- return <aside className={`concierge-panel ${shopping?'concierge-workspace':''} ${shopping&&!shopping.hasDisplay?'conversation-first':''} ${props.maximized?'maximized':''}`} aria-label="Jewelry buying concierge">
- <div className="concierge-header">{props.headerComponent}<button className="new-conversation" onClick={()=>setResetting(true)}>New conversation</button>{shopping&&!shopping.hasDisplay&&(shopping.products.length>0||shopping.selectionRecords.length>0)&&<button className="review-saved" onClick={()=>{shopping.setView('saved');shopping.openWorkspace()}}>Review saved pieces</button>}</div>
+ return <aside className={`concierge-panel ${shopping?'concierge-workspace':''} ${props.maximized?'maximized':''}`} aria-label="Jewelry buying concierge">
+ <div className="concierge-header">{props.headerComponent}<button className="new-conversation" onClick={()=>setResetting(true)}>New conversation</button></div>
  {resetting&&<div className="mission-reset" role="alert"><p>Start fresh? Your shopping brief will be cleared. Saved pieces will stay for you to review.</p><button onClick={reset}>Start a new mission</button><button onClick={()=>setResetting(false)}>Keep shopping</button></div>}
- {shopping?.hasDisplay&&<nav className="workspace-sections" aria-label="Concierge sections"><button aria-pressed={section==='conversation'} onClick={()=>setSection('conversation')}>Conversation</button><button aria-pressed={section==='shopping'} onClick={()=>setSection('shopping')}>Products</button></nav>}
+ {shopping&&<nav className="workspace-sections" aria-label="Concierge sections"><button aria-pressed={section==='conversation'} onClick={()=>setSection('conversation')}>Conversation</button><button aria-pressed={section==='shopping'} onClick={()=>setSection('shopping')}>Products</button></nav>}
  <div className="concierge-workspace-body" data-section={section}>
  <section className="conversation-column" aria-label="Conversation">{shopping&&<ShoppingBrief busy={updatingBrief}/>}<div className="concierge-messages">{sendError&&<p className="brief-error" role="alert">{sendError}</p>}{props.messagesComponent}</div><div className="concierge-prompt">{props.promptComponent}</div></section>
- {shopping?.hasDisplay&&<section className="shopping-column" aria-label="Your shopping workspace">
+ {shopping&&<section className="shopping-column" aria-label="Your shopping workspace">
  <ShoppingWorkspace onSend={text=>{setSection('conversation');if(demoTrace.contextError){setSendError(demoTrace.contextError);return}setSendError('');void props.sendMessage({text}).catch(e=>setSendError(e instanceof Error?e.message:'Your message could not be sent.'))}} onReset={()=>setResetting(true)}/>
  </section>}
  </div></aside>;
