@@ -26,7 +26,7 @@ Never expose credentials in VITE variables, commit .env files, or upload local r
 
 ## Release checks
 
-Run npm ci, npm run typecheck, npm test and npm run build from a clean source export. Scan the outgoing tree/history for secrets. Verify GitHub Actions against the pushed commit. Then deploy and verify:
+Run npm ci, npm run typecheck, npm test and npm run build from a clean source export. The build compiles the server with NodeNext resolution and imports the emitted entry point in native Node, catching extensionless ESM imports and missing JSON import attributes before deployment. Scan the outgoing tree/history for secrets. Verify GitHub Actions against the pushed commit. Then deploy and verify:
 
 1. Unauthenticated access to production and generated deployment URLs is protected.
 2. Authenticated /api/health succeeds.

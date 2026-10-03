@@ -1,6 +1,6 @@
-import {briefStateSchema,formatBriefValue,type BriefState,type BriefFactV2} from './briefSchema';
-import {pairTotal} from './shopping';
-import catalogueFacetValues from './catalogueFacetValues.json';
+import {briefStateSchema,formatBriefValue,type BriefState,type BriefFactV2} from './briefSchema.js';
+import {pairTotal} from './shopping.js';
+import catalogueFacetValues from './catalogueFacetValues.json' with {type:'json'};
 /** Public values observed by a read-only facet query; provenance and completeness are in the JSON.
  * Unknown values stay context. Neither compiler nor dictionary changes index settings. */
 export const CATALOGUE_FACET_VALUES:Readonly<Record<string,readonly string[]>>=catalogueFacetValues.values;

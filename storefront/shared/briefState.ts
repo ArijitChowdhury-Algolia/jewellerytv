@@ -1,5 +1,5 @@
-import {briefPatchSchema,briefStateSchema,type BriefState,type BriefPatch,type BriefFactInput} from './briefSchema';
-import type {BriefFact,BriefProposal} from './shopping';
+import {briefPatchSchema,briefStateSchema,type BriefState,type BriefPatch,type BriefFactInput} from './briefSchema.js';
+import type {BriefFact,BriefProposal} from './shopping.js';
 export function createBriefState(missionId:string):BriefState{return briefStateSchema.parse({version:2,missionId,revision:0,facts:[],processedTurns:[],tombstones:[],events:[]});}
 export function applyBriefOperations(state:BriefState,input:BriefPatch,now=new Date().toISOString()):BriefState{
  const current=briefStateSchema.parse(state),patch=briefPatchSchema.parse(input);

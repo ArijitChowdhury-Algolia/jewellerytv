@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {BRIEF_FIELDS} from './shopping';
+import {BRIEF_FIELDS} from './shopping.js';
 const id=z.string().min(1).max(300);
 export const briefValueSchema=z.discriminatedUnion('kind',[
  z.object({kind:z.literal('text'),text:z.string().min(1).max(500)}).strict(),
