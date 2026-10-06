@@ -333,6 +333,11 @@ describe('protected local API', () => {
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const port = (server.address() as { port: number }).port;
+    const health = await fetch(`http://127.0.0.1:${port}/api/health`);
+    expect(await health.json()).toMatchObject({
+      environment: 'production',
+      conciergeConfigured: true,
+    });
     const response = await fetch(`http://127.0.0.1:${port}/api/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

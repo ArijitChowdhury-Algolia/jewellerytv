@@ -7,7 +7,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:web": "vite --host localhost --port 5173 --strictPort",
     "dev:api": "tsx watch server/index.ts",
-    "format:check": "prettier --check server shared src tests scripts *.config.* *.json ../docs/config/concierge-development-proposal.json ../docs/config/concierge-resource-inventory.md --ignore-path .prettierignore && npm run check:line-policy",
+    "format:check": "prettier --check server shared src tests scripts *.config.* *.json --ignore-path .prettierignore && npm run check:line-policy",
     "lint": "eslint . --max-warnings=0",
     "check:dependencies": "dependency-cruiser --validate .dependency-cruiser.cjs server shared src tests",
     "check:line-policy": "node scripts/check-line-policy.mjs",
