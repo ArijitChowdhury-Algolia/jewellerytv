@@ -331,6 +331,44 @@ describe('API-only Concierge client tool runtime', () => {
     expect(result.status).toBe('applied');
     expect(runtime.getSession()?.brief.facts[0].evidence.quote).toBe(shopper.text);
   });
+  it('preserves the internal source quote contract when the model sends null', async () => {
+    const runtime = createConciergeToolRuntime({
+      storage: memoryStorage(),
+      initialMissionId: 'mission-1',
+      getCurrentShopperMessage: () => shopper,
+      fetchEvidence: async () => {
+        throw new Error('No retrieval expected');
+      },
+    });
+    runtime.beginTurn('turn-1', shopper.id);
+    const result = await runtime.updateSemantic(
+      { operations: [{ ...stateInput.operations[0], sourceQuote: null }] },
+      'tool-null-quote',
+    );
+    expect(result.status).toBe('applied');
+    expect(runtime.getSession()?.brief.facts[0].evidence.quote).toBe(shopper.text);
+  });
+  it('requires a precise quote rather than truncating a long shopper message', async () => {
+    const longMessage = { id: 'message-long', text: `ring ${'x'.repeat(2001)}` };
+    const runtime = createConciergeToolRuntime({
+      storage: memoryStorage(),
+      initialMissionId: 'mission-1',
+      getCurrentShopperMessage: () => longMessage,
+      fetchEvidence: async () => {
+        throw new Error('No retrieval expected');
+      },
+    });
+    runtime.beginTurn('turn-1', longMessage.id);
+    const result = await runtime.updateSemantic(
+      { operations: [{ ...stateInput.operations[0], sourceQuote: null }] },
+      'tool-long-quote',
+    );
+    expect(result).toMatchObject({
+      status: 'invalid_input',
+      failure: { code: 'SOURCE_QUOTE_REQUIRED' },
+    });
+    expect(runtime.getSession()?.brief.facts).toHaveLength(0);
+  });
   it('rejects semantic callbacks after turn completion or manual invalidation', async () => {
     const search = vi.fn(async () => {
       throw new Error('Search must not run');
