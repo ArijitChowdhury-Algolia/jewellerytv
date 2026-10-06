@@ -1,6 +1,6 @@
 # Plan 3.1 snapshot handoff
 
-**Status:** Incomplete Plan 3.1 snapshot, October 6, 2026. The new one-Concierge application has passed a real two-product discovery on an isolated protected Vercel deployment. The published development agent's strict `update_shopping_state` schema requires `sourceQuote` as a string or null; the application retains the precise quote when supplied and uses the current short shopper message only for null. The exact current production alias and Git commit are recorded in the local ignored Plan 3.1 and `SESSION.md` handoff. A snapshot deployment does not pass the full plan. This public file records handoff facts without private run evidence.
+**Status:** Incomplete Plan 3.1 snapshot, October 6, 2026. The new one-Concierge application now serves the protected [main Vercel URL](https://jewellerytv.vercel.app/). Connected browser checks showed product cards for necklaces and watches, plus a warm anniversary opening. The published development agent's strict `update_shopping_state` schema requires `sourceQuote` as a string or null; the application retains the precise quote when supplied and uses the current short shopper message only for null. The exact deployment and Git commit are recorded in the local Plan 3.1 and `SESSION.md` handoff. A snapshot deployment does not pass the full plan. This public file records handoff facts without private run evidence.
 
 ## What exists
 
@@ -22,6 +22,12 @@ The development agent is `Concierge - Development` (`0bdf59fe-e598-4db7-b139-2b9
 | 8. Promotion | No Plan 3.1 promotion was earned. | Complete earlier gates and independent review. A requested hosted snapshot is not a completion claim. |
 
 A fresh one-turn guardrail probe did not show the previous system notice, but it also failed to retrieve usable exact products and never reached presentation. It does not verify the guardrail change. A repeated output notice must be treated as a failed turn, even when the tool had staged a valid proposal.
+
+Later, a product turn staged two valid necklace choices but the native `unavailable_action_claim` classifier replaced its reply. The category was narrowed to explicit false claims of completed external or commerce actions while allowing catalogue-listed availability and verified in-session presentation. A repeat necklace request and a separate watch request then displayed cards without the notice. This is bounded regression evidence, not the required allow/deny matrix.
+
+**Discovery layout remains open.** In the watch result, two 36 mm items were grouped in one column and one 42 mm item in another. The second 36 mm card fell below the first, leaving a large empty area beside it. The current UI stacks each group's items vertically. The agent may select one to three items per group, but there is no guaranteed count or balanced masonry layout. The intended multiple-varieties-per-direction experience has not passed UX acceptance. Do not solve this by inventing filler products or forcing exactly three items per group; improve the layout and the evidence-backed curation separately.
+
+**Cleanup completed for this release:** server configuration no longer returns retired two-agent flags, API option types no longer advertise those ignored fields, and the snapshot command no longer hardcodes the old Concierge ID. The command requires an explicit ID. Reproducible bytecode and Vite caches were removed locally. Legacy session migration stays because it protects existing user state. Old evaluation runs, release snapshots and historical evidence remain by design, and older Agent Studio resources still need consumer verification before deletion. The broad module-size and formatting debt below remains open. The active general search proxy still forces `analytics:false`, `clickAnalytics:false` and `enableABTest:false`; this was not changed as part of source cleanup and needs a separate product/measurement decision.
 
 ## Quality and operating limits
 

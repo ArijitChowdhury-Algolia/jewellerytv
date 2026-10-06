@@ -52,17 +52,11 @@ export function loadConfig() {
   const environment: AgentEnvironment =
     process.env.NODE_ENV === 'production' ? 'production' : 'development';
   assertAgentIdentityBoundary({ developmentAgentId, productionAgentId, environment });
-  const conciergeAgentId = environment === 'production' ? productionAgentId : developmentAgentId;
-
   return {
     appId,
     apiKey,
     environment,
     developmentAgentId,
     productionAgentId,
-    conciergeAgentId,
-    briefV2Enabled: value('BRIEF_V2_ENABLED') === 'true',
-    candidateDirectEnabled: value('CONCIERGE_DIRECT_CANDIDATE_ENABLED') === 'true',
-    briefAgentId: value('JTV_BRIEF_AGENT_ID'),
   };
 }
