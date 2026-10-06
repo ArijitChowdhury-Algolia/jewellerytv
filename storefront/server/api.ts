@@ -162,6 +162,8 @@ export function createApiHandler(options: ApiOptions) {
   const developmentConfigured = environment === 'development' && identitiesDistinct;
   const conciergeId =
     environment === 'production' ? options.productionAgentId : options.developmentAgentId;
+  const conciergeConfigured =
+    validIdentity(conciergeId) && (environment === 'production' || identitiesDistinct);
   const cloudHosts = new Set(options.allowedHosts ?? []);
   for (const host of cloudHosts)
     if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(host)) throw new Error('Invalid deployment host');
@@ -191,7 +193,13 @@ export function createApiHandler(options: ApiOptions) {
         return;
       }
       if (req.method === 'GET' && url.pathname === '/api/health') {
-        reply(res, 200, { ok: true, mode: 'live', environment, developmentConfigured });
+        reply(res, 200, {
+          ok: true,
+          mode: 'live',
+          environment,
+          developmentConfigured,
+          conciergeConfigured,
+        });
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/agent-evidence') {
@@ -235,7 +243,7 @@ export function createApiHandler(options: ApiOptions) {
         path = `/1/indexes/prod_catalog/${encodeURIComponent(id)}`;
         method = 'GET';
       } else if (req.method === 'POST' && url.pathname === '/api/chat') {
-        if (!validIdentity(conciergeId) || (environment === 'development' && !identitiesDistinct)) {
+        if (!conciergeConfigured) {
           reply(res, 503, { error: 'Concierge is not configured' });
           return;
         }
