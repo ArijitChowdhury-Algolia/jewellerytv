@@ -7,14 +7,6 @@ export interface ConciergeHandle {
   ask: () => void;
 }
 
-type Gate = 'checking' | 'connected' | 'unavailable';
-
-export function healthAllowsConcierge(
-  health: { environment?: string; conciergeConfigured?: boolean } | null,
-): boolean {
-  return health?.conciergeConfigured === true;
-}
-
 export const demoTrace: {
   context: Record<string, string> | null;
   contextError: string;
@@ -30,22 +22,9 @@ export const Concierge = forwardRef<
   { context?: () => Record<string, string>; blocked?: string }
 >(function Concierge({ context, blocked }, ref) {
   const [open, setOpen] = useState(false);
-  const [gate, setGate] = useState<Gate>('checking');
   const opener = useRef<HTMLElement | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/health', { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((health: { conciergeConfigured?: boolean } | null) => {
-        setGate(healthAllowsConcierge(health) ? 'connected' : 'unavailable');
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setGate('unavailable');
-      });
-    return () => controller.abort();
-  }, []);
   useEffect(() => {
     if (wasOpen.current && !open) opener.current?.focus();
     wasOpen.current = open;
@@ -65,14 +44,12 @@ export const Concierge = forwardRef<
     [],
   );
 
-  const unavailable = gate !== 'connected';
-
   return (
     <>
       <button
         ref={trigger}
         type="button"
-        aria-label={unavailable ? 'Open Concierge unavailable notice' : 'Open jewelry Concierge'}
+        aria-label="Open jewelry Concierge"
         hidden={open}
         onClick={() => {
           opener.current = trigger.current;
@@ -80,41 +57,14 @@ export const Concierge = forwardRef<
         }}
         className="concierge-launcher"
       >
-        {unavailable ? 'Concierge unavailable' : 'Ask Concierge'}
+        Ask Concierge
       </button>
-      {open && unavailable && (
-        <aside className="concierge-panel concierge-workspace" aria-label="Concierge unavailable">
-          <header className="concierge-header">
-            <strong>JTV Concierge</strong>
-            <button
-              type="button"
-              aria-label="Close Concierge notice"
-              onClick={() => setOpen(false)}
-            >
-              Close
-            </button>
-          </header>
-          <div className="concierge-workspace-body concierge-unavailable-body">
-            <section className="conversation-column" aria-label="Conversation">
-              <p role="status">
-                The Concierge is unavailable in this environment. Please try again later.
-              </p>
-            </section>
-            <section className="shopping-column" aria-label="Product workspace">
-              <h2>Product workspace</h2>
-              <p>Saved products and comparisons are unavailable while chat is disconnected.</p>
-            </section>
-          </div>
-        </aside>
-      )}
-      {!unavailable && (
-        <ConnectedConcierge
-          context={context}
-          blocked={blocked}
-          open={open}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      <ConnectedConcierge
+        context={context}
+        blocked={blocked}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 });

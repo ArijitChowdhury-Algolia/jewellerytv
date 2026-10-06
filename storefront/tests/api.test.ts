@@ -304,10 +304,12 @@ describe('protected local API', () => {
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     const health = await request('/api/health');
-    expect(await health.json()).toMatchObject({
+    const healthPayload = await health.json();
+    expect(healthPayload).toMatchObject({
       environment: 'development',
-      developmentConfigured: false,
     });
+    expect(healthPayload).not.toHaveProperty('developmentConfigured');
+    expect(healthPayload).not.toHaveProperty('conciergeConfigured');
     const response = await request('/api/chat', {
       id: 'unconfigured',
       messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'ring' }] }],
@@ -336,7 +338,6 @@ describe('protected local API', () => {
     const health = await fetch(`http://127.0.0.1:${port}/api/health`);
     expect(await health.json()).toMatchObject({
       environment: 'production',
-      conciergeConfigured: true,
     });
     const response = await fetch(`http://127.0.0.1:${port}/api/chat`, {
       method: 'POST',

@@ -364,6 +364,13 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
       )
     )
       return { status: 'invalid_input', failure: { code: 'NO_OPERATIONS' } };
+    if (
+      message.text.length > 2000 &&
+      raw.operations.some(
+        (operation) => !Object.hasOwn(operation as Record<string, unknown>, 'sourceQuote'),
+      )
+    )
+      return { status: 'invalid_input', failure: { code: 'SOURCE_QUOTE_REQUIRED' } };
     const payload = JSON.stringify(raw),
       cached = semanticUpdates.get(toolCallId);
     if (cached) {
@@ -377,7 +384,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
         op.fact && typeof op.fact === 'object'
           ? { ...(op.fact as Record<string, unknown>), id: `${toolCallId}-fact-${index}` }
           : op.fact;
-      return { ...op, fact };
+      return { ...op, sourceQuote: op.sourceQuote ?? message.text, fact };
     });
     const result = await update(
       {

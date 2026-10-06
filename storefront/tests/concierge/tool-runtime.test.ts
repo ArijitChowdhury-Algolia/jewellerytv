@@ -312,6 +312,25 @@ describe('API-only Concierge client tool runtime', () => {
       'invalid_input',
     );
   });
+  it('uses the current shopper message as provenance when the model omits a source quote', async () => {
+    const runtime = createConciergeToolRuntime({
+      storage: memoryStorage(),
+      initialMissionId: 'mission-1',
+      getCurrentShopperMessage: () => shopper,
+      fetchEvidence: async () => {
+        throw new Error('No retrieval expected');
+      },
+    });
+    const operation = { ...stateInput.operations[0] } as { sourceQuote?: string } & Record<
+      string,
+      unknown
+    >;
+    delete operation.sourceQuote;
+    runtime.beginTurn('turn-1', shopper.id);
+    const result = await runtime.updateSemantic({ operations: [operation] }, 'tool-no-quote');
+    expect(result.status).toBe('applied');
+    expect(runtime.getSession()?.brief.facts[0].evidence.quote).toBe(shopper.text);
+  });
   it('rejects semantic callbacks after turn completion or manual invalidation', async () => {
     const search = vi.fn(async () => {
       throw new Error('Search must not run');

@@ -23,7 +23,7 @@ it('does not substitute the development identity in production', () => {
   expect(config.conciergeAgentId).toBeUndefined();
 });
 
-it('rejects malformed or matching configured identities', () => {
+it('rejects malformed identities while allowing the same published agent in both environments', () => {
   expect(() =>
     assertAgentIdentityBoundary({
       developmentAgentId: 'invalid id',
@@ -37,5 +37,5 @@ it('rejects malformed or matching configured identities', () => {
       productionAgentId: 'same-agent',
       environment: 'development',
     }),
-  ).toThrow('must differ');
+  ).not.toThrow();
 });

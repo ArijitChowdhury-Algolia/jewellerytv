@@ -2,7 +2,7 @@
 
 A protected JTV-style storefront for exploring jewelry through conversation. One Concierge in Algolia's Agent Studio learns the shopper's preferences, searches the read-only JTV catalogue and guidance, and helps them discover, save, compare and combine pieces. The shopper sees conversation beside a product workspace.
 
-**Status:** This repository is a handoff snapshot of the Plan 3.1 build. It is not an accepted production-quality shopping journey. An anniversary gift flow reached a saved shortlist, comparison, JTV blog guidance and a selected necklace. A two-piece look rendered with an exact $239.98 item subtotal. A later replacement suggested a bracelet with yellow-gold finish against an accepted dislike, and a corrected look was blocked by an output guardrail. Chat transcript continuity after reload and the full acceptance campaign remain open. No checkout, account or authoritative purchase verification is provided.
+**Status:** This repository is an incomplete Plan 3.1 handoff, not the code currently serving the protected Vercel production alias. The older working app remains live. The new source opens its Concierge in an isolated deployment, but product discovery is blocked by the published Agent Studio tool schema: a model call omitted a required `sourceQuote`, and the dashboard failed twice while saving the proposed schema correction. An anniversary gift flow previously reached a saved shortlist, comparison, JTV blog guidance and a selected necklace; a two-piece look rendered at $239.98. Replacement curation, output guardrails, reload continuity and full acceptance remain open. No checkout, account or authoritative purchase verification is provided.
 
 **Protected hosted app:** [jewellerytv.vercel.app](https://jewellerytv.vercel.app)
 
@@ -30,7 +30,7 @@ The browser keeps the current shopping mission in session storage. Saved, Compar
 
 ## Run locally
 
-Use Node.js 24 and npm. Supply the server-side Algolia values in the project-root `.env.local`, along with distinct development and retained production agent IDs as described in [the environment template](storefront/.env.example). Do not put credentials in `VITE_*` variables or Git.
+Use Node.js 24 and npm. Supply the server-side Algolia values and published Concierge agent ID in the project-root `.env.local` as described in [the environment template](storefront/.env.example). The two environment variables may name the same agent. Do not put credentials in `VITE_*` variables or Git.
 
 ```sh
 cd storefront
