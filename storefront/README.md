@@ -15,11 +15,11 @@ The current snapshot is incomplete. See the [Plan 3.1 handoff](docs/PLAN-3.1-STA
 | `src/ProductWorkspace.tsx` | Discover, Saved, Compare and Combination product views with visible prices and supported details. |
 | `tests/` and `evaluation/concierge-phases-1-3/` | Local regressions and a prepared but unaccepted live-journey scaffold. |
 
-Only `Concierge - Development` has been exercised through the new connected local path. Its published tool names are `update_shopping_state`, `retrieve_evidence` and `present_choices`. The retained older production Concierge and the legacy interpreter are separate Agent Studio resources. No product-index setting or record change is part of this application.
+The published `Concierge - Development` now serves the protected Vercel snapshot as well as the connected local path. Its tool names are `update_shopping_state`, `retrieve_evidence` and `present_choices`. The retained older Concierge and legacy Interpreter remain separate Agent Studio resources pending consumer checks. No product-index setting or record change is part of this application.
 
 ## Local run
 
-Use Node.js 24. Place server credentials and the two distinct local agent identities in the parent project's `.env.local`; see [`.env.example`](.env.example). Never commit that file or pass credentials through `VITE_*` variables.
+Use Node.js 24. Place server credentials and the selected agent identity in the parent project's `.env.local`; see [`.env.example`](.env.example). The development and production identity variables may name the same published agent. Never commit that file or pass credentials through `VITE_*` variables.
 
 ```sh
 npm ci
@@ -41,6 +41,8 @@ python3 -m unittest discover -s evaluation -p 'test_*.py'
 ```
 
 `format:check` still reports pre-existing formatting debt; do not claim an all-green quality gate from the other passing commands. Live Agent Studio tests consume model and classifier usage and are not part of `npm test`. The prepared Phase 3.1 Playwright runner is not acceptance-ready; its request accounting and UI assertions must be repaired before any paid campaign.
+
+For a read-only configuration backup, run `npm run snapshot -- <agent-id>`. The ID must be explicit; the command no longer defaults to a retired agent. Snapshots are written under ignored `evidence/` and are not release source.
 
 ## Deployment
 

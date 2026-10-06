@@ -13,14 +13,13 @@ it('allows catalogue startup without Agent Studio identities', () => {
   const config = loadConfig();
   expect(config.developmentAgentId).toBeUndefined();
   expect(config.productionAgentId).toBeUndefined();
-  expect(config.conciergeAgentId).toBeUndefined();
 });
 
 it('does not substitute the development identity in production', () => {
   vi.stubEnv('NODE_ENV', 'production');
   vi.stubEnv('JTV_CONCIERGE_DEVELOPMENT_AGENT_ID', 'development-agent');
   const config = loadConfig();
-  expect(config.conciergeAgentId).toBeUndefined();
+  expect(config.productionAgentId).toBeUndefined();
 });
 
 it('rejects malformed identities while allowing the same published agent in both environments', () => {

@@ -5,8 +5,6 @@ import { z } from 'zod';
 import { RequestTelemetry, productionTelemetryLogger, type TelemetryLogger } from './telemetry.js';
 import { runEvidenceRoute } from './concierge/evidenceRoute.js';
 
-/** Retained for legacy offline fixtures; runtime identity comes from server config. */
-export const AGENT_ID = 'ba2bb723-0459-4df6-ba8b-812088f39f0f';
 export const INDICES = [
   'prod_catalog',
   'prod_catalog_featured',
@@ -109,13 +107,6 @@ export type ApiOptions = {
   productionAgentId?: string;
   environment?: 'development' | 'production';
   telemetryLogger?: TelemetryLogger;
-  /** @deprecated ignored compatibility fields; native chat owns the turn. */
-  conciergeAgentId?: string;
-  briefExtractor?: unknown;
-  briefV2Enabled?: boolean;
-  candidateDirectEnabled?: boolean;
-  briefAgentId?: string;
-  briefModel?: unknown;
 };
 const allowedOrigins = new Set(['http://localhost:5173', 'http://127.0.0.1:5173']);
 function reply(res: ServerResponse, status: number, data: unknown) {
