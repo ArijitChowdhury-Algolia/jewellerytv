@@ -20,13 +20,6 @@ export function assertAgentIdentityBoundary(config: AgentIdentityConfig) {
 
   validate('JTV_CONCIERGE_DEVELOPMENT_AGENT_ID', config.developmentAgentId);
   validate('JTV_CONCIERGE_PRODUCTION_AGENT_ID', config.productionAgentId);
-  if (
-    config.developmentAgentId &&
-    config.productionAgentId &&
-    config.developmentAgentId === config.productionAgentId
-  ) {
-    throw new Error('Development and production Agent Studio identities must differ');
-  }
 }
 
 function readLocalEnvironment() {

@@ -12,7 +12,7 @@ The customer `prod_catalog` and `blog` records and index settings are read-only.
 
 ## Production environment
 
-Set server-side `ALGOLIA_APP_ID`, `ALGOLIA_SEARCH_API_KEY`, `APP_ALLOWED_HOSTS` and `JTV_CONCIERGE_PRODUCTION_AGENT_ID`. The production ID must name the published Concierge selected for this snapshot. The production API requires that ID; development locally requires its own distinct `JTV_CONCIERGE_DEVELOPMENT_AGENT_ID` and a retained production ID. Do not place an Algolia key or agent configuration secret in a `VITE_*` value. Do not commit `.env.local` or raw Agent Studio snapshots.
+Set server-side `ALGOLIA_APP_ID`, `ALGOLIA_SEARCH_API_KEY`, `APP_ALLOWED_HOSTS` and `JTV_CONCIERGE_PRODUCTION_AGENT_ID`. The production ID must name the published Concierge selected for this snapshot. Local development uses `JTV_CONCIERGE_DEVELOPMENT_AGENT_ID`; both IDs may refer to the same agent. The launcher does not gate on environment or health. The server rejects chat when the selected ID is missing or invalid. Do not place an Algolia key or agent configuration secret in a `VITE_*` value. Do not commit `.env.local` or raw Agent Studio snapshots.
 
 Historic `BRIEF_V2_ENABLED`, `JTV_BRIEF_AGENT_ID`, `BRIEF_TURN_ROUTING_ENABLED`, `CONCIERGE_DIRECT_CANDIDATE_ENABLED` and `JTV_CONCIERGE_AGENT_ID` belong to the retired two-agent route and do not drive the current connected `/api/chat` path. Remove hosted variables only after verifying no old deployment or rollback depends on them. A configured environment variable name does not prove an active consumer.
 
