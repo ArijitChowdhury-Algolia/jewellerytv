@@ -1,49 +1,29 @@
-# GitHub and Vercel deployment
+# Protected GitHub and Vercel snapshot
 
-Repository: https://github.com/ArijitChowdhury-Algolia/jewellerytv. Vercel project: algolia/jewellerytv. Production alias: jewellerytv.vercel.app.
+Repository: [ArijitChowdhury-Algolia/jewellerytv](https://github.com/ArijitChowdhury-Algolia/jewellerytv). Vercel project: `algolia/jewellerytv`. Production alias: [jewellerytv.vercel.app](https://jewellerytv.vercel.app).
 
-## Deployment authorization
+This release is an explicitly requested snapshot of incomplete Plan 3.1 work. It must not be described as a completed shopping experience. The [status handoff](PLAN-3.1-STATUS.md) lists the observed passes and failures.
 
-Work locally by default. A GitHub check-in, checkpoint, code fix or successful CI run does not authorize deployment. Deploy to Vercel only when Arijit explicitly requests it for that release. This applies to production and preview deployments.
+## Deployment boundary
 
-Git-triggered deployments are disabled by `git.deploymentEnabled: false` in `vercel.json`, following [Vercel’s Git configuration documentation](https://vercel.com/docs/project-configuration/git-configuration). The project currently has no Git integration connected. Keep CI verification-only and preserve Vercel Authentication on all deployments. Manual CLI deployment remains available for an explicitly authorized release.
+Vercel Authentication must remain enabled for every deployment. `git.deploymentEnabled: false` in `vercel.json` keeps GitHub pushes from deploying automatically. Deploy manually only for an authorized release. The Vercel project root is `storefront`, Node.js is 24.x, the build is `npm run build`, output is `dist`, and the same Node API handler runs locally and as the Vercel function. Direct product, category and search routes are SPA rewrites.
 
-## Project configuration
+The customer `prod_catalog` and `blog` records and index settings are read-only. Deployment does not modify them or publish an Agent Studio prompt. Agent Studio configuration is administered separately in the signed-in dashboard.
 
-- Root directory: storefront
-- Framework: Vite
-- Node runtime:24.x
-- Install: npm ci
-- Build: npm run build
-- Static output: dist
-- Node function: api/[...path].ts, maximum duration180 seconds
-- SPA rewrites preserve direct category, product and search links.
-- Vercel Authentication: All Deployments. Protects the production alias and generated deployment URLs. Host/Origin validation is an additional boundary, not authentication.
+## Production environment
 
-## Server environment
+Set server-side `ALGOLIA_APP_ID`, `ALGOLIA_SEARCH_API_KEY`, `APP_ALLOWED_HOSTS` and `JTV_CONCIERGE_PRODUCTION_AGENT_ID`. The production ID must name the published Concierge selected for this snapshot. The production API requires that ID; development locally requires its own distinct `JTV_CONCIERGE_DEVELOPMENT_AGENT_ID` and a retained production ID. Do not place an Algolia key or agent configuration secret in a `VITE_*` value. Do not commit `.env.local` or raw Agent Studio snapshots.
 
-Set ALGOLIA_APP_ID, ALGOLIA_SEARCH_API_KEY and APP_ALLOWED_HOSTS in Production and Preview. APP_ALLOWED_HOSTS includes jewellerytv.vercel.app. The function also trusts the exact Vercel-provided deployment and production hostnames. It does not trust arbitrary forwarded-host values.
+Historic `BRIEF_V2_ENABLED`, `JTV_BRIEF_AGENT_ID`, `BRIEF_TURN_ROUTING_ENABLED`, `CONCIERGE_DIRECT_CANDIDATE_ENABLED` and `JTV_CONCIERGE_AGENT_ID` belong to the retired two-agent route and do not drive the current connected `/api/chat` path. Remove hosted variables only after verifying no old deployment or rollback depends on them. A configured environment variable name does not prove an active consumer.
 
-Set BRIEF_V2_ENABLED=true and JTV_BRIEF_AGENT_ID together to enable the published brief interpreter. When enabled, interpreter failures stop the affected turn with a recoverable retry; they do not silently skip preference updates. JTV_CONCIERGE_AGENT_ID optionally routes to an isolated published concierge candidate for validation. Omit it to use the existing main agent. No raw agent snapshot belongs in the deployment.
+## Verify the snapshot
 
-Rollback: redeploy the previous protected deployment and restore its environment values. Disabling BRIEF_V2_ENABLED restores the legacy API route but also removes automatic same-turn brief enforcement; do not present that mode as equivalent. Preserve per-tab saved state and private evaluation evidence.
+1. Run `npm ci`, `npm run lint`, `npm run check:dependencies`, `npm run typecheck`, `npm test`, `npm run build` and Python evaluation unit tests from the intended checkout. Record `format:check` failures honestly.
+2. Review the intended outgoing Git tree and commits for credentials and private evidence. Push and verify GitHub CI for the exact commit SHA.
+3. Deploy that same checkout manually with `vercel --prod --scope algolia`. Record the deployment ID and production alias. A successful CLI command is not yet a verified site.
+4. Check that unauthenticated production and deployment URLs remain protected. With authorized authentication, verify `/api/health`, a read-only exact product request, the served asset identity and one bounded Concierge request against the intended agent ID. Keep the agent usage cost in the record.
+5. Confirm `git.deploymentEnabled: false` and Vercel Authentication after the deployment. Record any failure, including a successful build with an unconfigured or guardrail-blocked chat.
 
-Never expose credentials in VITE variables, commit .env files, or upload local research/evidence. The application uses process.env in the cloud. Local startup retains its parent .env.local fallback.
+Rollback: restore the prior protected deployment and its environment values. Do not delete the older production Concierge until its consumer and rollback roles are disproven. Deleting it first would make a simple rollback of the prior app impossible. Preserve shopper state and private test evidence; never rewrite Git history as cleanup.
 
-## Release checks
-
-Run npm ci, npm run typecheck, npm test and npm run build from a clean source export. The build compiles the server with NodeNext resolution and imports the emitted entry point in native Node, catching extensionless ESM imports and missing JSON import attributes before deployment. Scan the outgoing tree/history for secrets. Verify GitHub Actions against the pushed commit. Then deploy and verify:
-
-1. Unauthenticated access to production and generated deployment URLs is protected.
-2. Authenticated /api/health succeeds.
-3. Catalogue queries, exact product URLs and facets work.
-4. Chat streams a real response and product cards navigate locally.
-5. No API key is present in browser requests or the built frontend.
-
-No deployment step writes to the production catalogue or changes the main concierge configuration. Runtime conversations can update the provider's usage/history according to its existing settings.
-
-Rollback through Vercel's previous deployment controls. Never rewrite Git history as deployment cleanup.
-
-## Diagram rendering
-
-The architecture SVG is self-contained, uses standard Arial/Helvetica fonts and no external assets. No PNG fallback is needed for GitHub's SVG rendering. The README image and hosted workflow are checked after publication.
+The root README uses a self-contained Mermaid workflow diagram that GitHub renders natively. It has no separate PNG fallback or external font/image asset. Verify the rendered diagram in the pushed GitHub README at normal zoom. The former SVG depicted a two-agent interpreter flow and is removed from active documentation.

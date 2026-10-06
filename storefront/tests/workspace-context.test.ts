@@ -23,3 +23,10 @@ it('chunks confirmed lists without losing fields',()=>{
  const encoded=encodeShoppingContext({confirmedBrief:Array.from({length:4},()=>({value:'x'.repeat(400)}))});
  expect(Object.values(encoded).flatMap(s=>JSON.parse(s))).toHaveLength(4);
 });
+it('states an empty Saved list explicitly even while other products are displayed',()=>{
+ const context=encodeShoppingContext({shortlist:[],displayedProductIds:['displayed-only'],shortlistEvidence:'Saved selections only.'});
+ expect(context.shopping_shortlist_0).toBe('[]');expect(JSON.parse(context.shopping_displayedProductIds_0)).toEqual(['displayed-only']);
+});
+it('distinguishes deliberately empty UI selections from unavailable context',()=>{
+ expect(encodeShoppingContext({comparisonIds:[],combination:[],unavailable:undefined})).toEqual({shopping_comparisonIds_0:'[]',shopping_combination_0:'[]'});
+});

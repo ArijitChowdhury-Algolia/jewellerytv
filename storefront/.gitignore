@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.DS_Store
 .env*
 playwright-report/
 test-results/
@@ -19,6 +20,9 @@ coverage/
 
 evaluation/baseline/
 evaluation/runs/
+evaluation/architecture-comparison-2026-10-05/
+evaluation/closeout/
+evaluation/holistic-journeys/
 evaluation/build_suite.py
 __pycache__/
 *.pyc

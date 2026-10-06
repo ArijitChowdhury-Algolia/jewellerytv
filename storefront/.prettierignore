@@ -1,0 +1,11 @@
+# Generated catalogue snapshots and their archived evidence are source material,
+# not handwritten modules to reformat in a build check.
+shared/catalogueFacetValues.json
+src/catalog/fixtures.json
+evaluation/**
+**/archive/**
+**/archived/**
+**/runs/**
+**/evidence/**
+node_modules/**
+dist/**

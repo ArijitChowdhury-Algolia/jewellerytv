@@ -1,24 +1,37 @@
-# Jewellery TV concierge demo
+# JTV Concierge demo
 
-A JTV-style storefront for testing a jewelry buying concierge with real catalogue context. Shoppers can browse six departments, refine results, open an exact product style and discuss it with the hosted Algolia Agent Studio concierge.
+A protected JTV-style storefront for exploring jewelry through conversation. One Concierge in Algolia's Agent Studio learns the shopper's preferences, searches the read-only JTV catalogue and guidance, and helps them discover, save, compare and combine pieces. The shopper sees conversation beside a product workspace.
 
-The app uses React InstantSearch for search and chat. A server-side API keeps Algolia credentials out of the browser and restricts access to the approved catalogue indices and agent endpoints. It never changes customer index records, ranking, synonyms or search settings.
+**Status:** This repository is a handoff snapshot of the Plan 3.1 build. It is not an accepted production-quality shopping journey. An anniversary gift flow reached a saved shortlist, comparison, JTV blog guidance and a selected necklace. A two-piece look rendered with an exact $239.98 item subtotal. A later replacement suggested a bracelet with yellow-gold finish against an accepted dislike, and a corrected look was blocked by an output guardrail. Chat transcript continuity after reload and the full acceptance campaign remain open. No checkout, account or authoritative purchase verification is provided.
 
-**Hosted app:** https://jewellerytv.vercel.app
-**Vercel project:** https://vercel.com/algolia/jewellerytv
-**Access:** Vercel authentication protects production and preview deployments.
+**Protected hosted app:** [jewellerytv.vercel.app](https://jewellerytv.vercel.app)
+**GitHub:** [ArijitChowdhury-Algolia/jewellerytv](https://github.com/ArijitChowdhury-Algolia/jewellerytv)
 
 ## How it works
 
-![Storefront and concierge workflow](storefront/docs/architecture.svg)
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#F5F5F7","primaryTextColor":"#000033","primaryBorderColor":"#0067F7","lineColor":"#0067F7","fontFamily":"Sora"}}}%%
+flowchart LR
+  shopper[Shopper] --> ui[JTV two-column UI]
+  ui -->|chat request| api[Local or Vercel API]
+  api -->|completion stream| agent[Concierge in Agent Studio]
+  agent -->|client tool call| callbacks[Browser tool callbacks]
+  callbacks -->|typed updates| state[Tab shopping state]
+  callbacks -->|read-only retrieval| evidence[Evidence API]
+  evidence --> products[(prod_catalog)]
+  evidence --> guidance[(blog)]
+  callbacks -->|validated choice after completed turn| workspace[Product workspace]
+  state --> ui
+  workspace --> ui
+```
 
-The same validated API handler runs locally and as a Vercel Node function. Product URLs use exact Algolia objectIDs, not product-family IDs. The client sends bounded page context with each message. Curated product results feed a separate visual workspace; the conversation retains the agent’s guidance and questions. The shopper controls product previews and any change to the browsing view.
+The Concierge owns interpretation, tone, questions, search decisions, curation and explanations. The application owns state, identity, source boundaries, exact arithmetic and display validation. Its three client-side tools are `update_shopping_state`, `retrieve_evidence` and `present_choices`. Product and blog indices and all index settings remain read-only. The app does not contain canned Concierge replies or a second conversational router.
 
-The shopping workspace separates Discover, Compare, Saved and Combination. Compare shows alternatives with images and recorded facts; only Combination calculates a purchase subtotal. Exact product records are shared across views and refreshed through read-only requests. The editable shopping brief appears as compact chips in the chat header. With brief v2 enabled, clear spoken preferences update before search; ambiguous changes prompt clarification. Supported requirements become query-time filters without changing the production index. Manual edits, removal, Undo and saved-piece conflict checks use the same revisioned state. The desktop product panel stays beside the conversation, with a simple empty state until there are products to review. The hosted agents own their model configuration; this repository does not automatically overwrite their prompts or settings.
+The browser keeps the current shopping mission in session storage. Saved, Compare and manual Combination share that state. A new conversation keeps Saved while resetting the brief and working selection. The longer-term Saved/Compare session lifecycle has not been decided. Agent Studio memory is off, and there is no login or cross-device state.
 
-## Run and verify
+## Run locally
 
-Use Node.js24 and npm:
+Use Node.js 24 and npm. Supply the server-side Algolia values in the project-root `.env.local`, along with distinct development and retained production agent IDs as described in [the environment template](storefront/.env.example). Do not put credentials in `VITE_*` variables or Git.
 
 ```sh
 cd storefront
@@ -26,22 +39,10 @@ npm ci
 npm run dev
 ```
 
-The website runs at http://localhost:5173. The local API reads server credentials from the project-root `.env.local`, with names documented in [the environment template](storefront/.env.example). Never put real values in Git or in `VITE_*` variables.
+Open `http://localhost:5173`. The local API runs on `127.0.0.1:5174`. The [storefront guide](storefront/README.md) covers the source modules and checks. The [deployment guide](storefront/docs/deployment.md) covers the protected Vercel snapshot and rollback.
 
-```sh
-npm run typecheck
-npm test
-npm run build
-```
+## Verification and limits
 
-[Application runbook](storefront/README.md) · [Deployment guide](storefront/docs/deployment.md)
+The local build uses TypeScript, Vitest, ESLint and dependency checks. The live Concierge and guardrail must be judged through actual connected browser journeys. A successful tool receipt, a green unit suite or a deployed page is not proof of a complete shopping experience. The current release's exact test, CI, agent and deployment identities belong in the [snapshot handoff](storefront/docs/PLAN-3.1-STATUS.md).
 
-Work locally by default. Vercel deployment requires an explicit request for each release. Git-triggered deployments are disabled; pushing to GitHub or checkpointing does not deploy the app.
-
-GitHub Actions runs type checks, tests and the build. Browser regression source is included; live model tests are separate and consume the connected agent's usage.
-
-## Boundaries
-
-This is a discovery demo, not checkout. Prices and availability are retrieved catalogue facts, not transaction confirmation. Accounts, orders, payments, auctions and television streaming are outside scope. Browser conversation history, shopping workspace state and server-side persistent memory are distinct; a new client conversation does not delete stored server history.
-
-This public repository contains application code, tests and demo assets. Private research, conversation evidence, credentials and live-agent snapshots are deliberately excluded and preserved in the local project. JTV's logo and imagery remain JTV's assets and are used here as demo references, not as a statement of endorsement.
+The hosted demo must retain Vercel Authentication. Git-triggered deployments are disabled; a GitHub push does not deploy. Customer index records, rankings, synonyms and settings must never be changed as part of this project. JTV marks and imagery are demo references and do not imply endorsement.

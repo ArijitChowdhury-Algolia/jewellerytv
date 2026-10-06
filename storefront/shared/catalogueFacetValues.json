@@ -804,6 +804,12 @@
       "Size 9",
       "Size 9.5",
       "Small"
+    ],
+    "Catalog_WatchPrimaryDialPrimaryColor": [
+      "Blue"
+    ],
+    "Catalog_WatchBandType": [
+      "Bracelet"
     ]
   }
 }
