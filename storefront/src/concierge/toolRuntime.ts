@@ -367,7 +367,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     if (
       message.text.length > 2000 &&
       raw.operations.some(
-        (operation) => !Object.hasOwn(operation as Record<string, unknown>, 'sourceQuote'),
+        (operation) => (operation as Record<string, unknown>).sourceQuote == null,
       )
     )
       return { status: 'invalid_input', failure: { code: 'SOURCE_QUOTE_REQUIRED' } };
