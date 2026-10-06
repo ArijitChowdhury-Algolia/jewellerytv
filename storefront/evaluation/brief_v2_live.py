@@ -11,6 +11,9 @@ except ImportError:
 from pathlib import Path
 from decimal import Decimal, InvalidOperation
 ROOT=Path(__file__).resolve().parents[2]
+# Copied from InstantSearch.js 4.119.0 AbstractChat's defaultGuardrailFallbackResponse.
+# Source: storefront/node_modules/instantsearch.js/cjs/lib/ai-lite/abstract-chat.js:27.
+SDK_DEFAULT_GUARDRAIL_FALLBACK='Sorry, we are not able to generate a response at the moment.'
 SCENARIOS={
  'uncertain':['I need a birthday gift for my partner, but I have no idea what jewellery they would like.','They wear small everyday pieces, nothing flashy. I can spend up to $120 per item.','Maybe simple stud earrings in sterling silver. Please show a few.','Thanks, I will think about these. No more searching for now.'],
  'budget_correction':['Find sterling silver earrings strictly under $200 per item.','Actually make that strictly under $75 per item, but keep sterling silver.','I would prefer studs. Keep that $75 limit.','Do any of those sit exactly at the limit? I only want prices below it.'],
@@ -34,11 +37,16 @@ def sanitize(value):
  if isinstance(value,dict):return {k:sanitize(v) for k,v in value.items() if not any(x in k.lower() for x in ['reasoning','apikey','api_key','authorization','secret','tokenusage_raw'])}
  if isinstance(value,list):return [sanitize(v) for v in value]
  return value
+def guardrail_fallback_text(data):
+ supplied=data.get('fallbackResponse') if isinstance(data,dict) else None
+ return supplied if isinstance(supplied,str) and supplied else SDK_DEFAULT_GUARDRAIL_FALLBACK
 def sdk_message(events):
  message={'id':'eval-assistant-'+uuid.uuid4().hex,'role':'assistant','parts':[]};tools={};texts={}
  for e in events:
   t=e.get('type','')
-  if t=='start':message['id']=e.get('messageId',message['id'])
+  if t=='start':
+   message['id']=e.get('messageId',message['id'])
+   if 'messageMetadata' in e:message['metadata']=e['messageMetadata']
   elif t=='text-delta':
    key=e.get('id','text');part=texts.get(key)
    if part is None:part={'type':'text','text':''};texts[key]=part;message['parts'].append(part)
@@ -50,6 +58,13 @@ def sdk_message(events):
   elif t in ('tool-output-available','tool-output-error') and e.get('toolCallId')in tools:
    part=tools[e['toolCallId']];part['state']='output-available' if t=='tool-output-available' else 'output-error'
    part['output' if t=='tool-output-available' else 'errorText']=e.get('output',e.get('errorText','Tool failed'))
+  elif t=='data-guardrail-violation':
+   data=e.get('data') if isinstance(e.get('data'),dict) else {}
+   fallback=guardrail_fallback_text(data)
+   # InstantSearch 4.119.0's installed AbstractChat replaces currentMessage
+   # parts with data.fallbackResponse, or this exact default when it is absent.
+   message['parts']=[{'type':'text','text':fallback,'state':'done'}]
+   tools.clear();texts.clear()
  return message
 
 def request(url,body,headers):
@@ -57,7 +72,7 @@ def request(url,body,headers):
  try:
   req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Content-Type':'application/json',**headers},method='POST')
   with urllib.request.urlopen(req,timeout=180,context=SSL_CONTEXT)as response:
-   status=response.status;response_headers={k:v for k,v in response.headers.items() if k.lower()in ['server-timing','x-request-id','x-brief-outcome']}
+   status=response.status;response_headers={k.lower():v for k,v in response.headers.items() if k.lower()in ['server-timing','x-request-id','x-brief-outcome','x-jtv-evaluation-mode']}
    for line in response:
     if not line.startswith(b'data:'):continue
     try:event=json.loads(line[5:])

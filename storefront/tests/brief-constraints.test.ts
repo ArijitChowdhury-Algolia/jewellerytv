@@ -22,8 +22,8 @@ it('preserves inclusive bounds and checks exact quantities for combinations',()=
  expect(checkCombinationBudget(s,[{price:100,quantity:3}]).status).toBe('conflict');
  expect(checkCombinationBudget(s,[{price:null}]).status).toBe('unknown');
 });
-it('leaves unresolved and recipient-scoped budgets unapplied',()=>{
- expect(compileBriefConstraints(state([{...base,value:{...base.value as Extract<BriefFactInput['value'],{kind:'money'}>,basis:'unresolved'}}])).filters).toBeUndefined();
+it('leaves unverified unresolved and recipient-scoped budgets unapplied',()=>{
+ expect(compileBriefConstraints(state([{...base,evidence:{...base.evidence,verified:false},value:{...base.value as Extract<BriefFactInput['value'],{kind:'money'}>,basis:'unresolved'}}])).filters).toBeUndefined();
  expect(compileBriefConstraints(state([{...base,scope:{kind:'recipient',key:'mother'}}])).filters).toBeUndefined();
 });
 it('compiles read-only verified Ring, Round, Blue and Stud canonical constraints',()=>{

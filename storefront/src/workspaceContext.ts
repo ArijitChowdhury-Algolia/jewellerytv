@@ -17,6 +17,8 @@ export function encodeShoppingContext(state:Record<string,unknown>):Record<strin
  for(const [name,value] of Object.entries(state)){
   if(value===null||value===undefined)continue;
   if(Array.isArray(value)){
+   // An empty selection is known state, not unavailable context or a displayed list.
+   if(value.length===0){result[`shopping_${name}_0`]='[]';continue;}
    let chunk:unknown[]=[];let index=0;
    for(const item of value){if(bytes(JSON.stringify([item]))>1024)throw new Error('A shopping preference is too long. Shorten it before continuing.');
     if(bytes(JSON.stringify([...chunk,item]))>1024){result[`shopping_${name}_${index++}`]=JSON.stringify(chunk);chunk=[];}chunk.push(item);}

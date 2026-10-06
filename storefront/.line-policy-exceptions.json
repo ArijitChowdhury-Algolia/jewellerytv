@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "Checked exceptions for handwritten modules above 500 nonblank, noncomment lines.",
+  "exceptions": [
+    {
+      "path": "src/catalog/facets.ts",
+      "reason": "Pre-existing catalogue adapter retained as one cohesive compatibility boundary; refactoring is outside Task 1 ownership.",
+      "owner": "JTV project",
+      "reviewedOn": "2026-10-05"
+    }
+  ]
+}

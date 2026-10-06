@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "missionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "expectedStateRevision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expectedEvidenceBatchRevision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "turnId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "proposalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "product_groups",
+            "complete_looks"
+          ]
+        },
+        "groups": {
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "evidenceRef": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "objectID": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "contentHash": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 20
+                        },
+                        "componentSlot": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "evidenceRef",
+                        "objectID",
+                        "contentHash",
+                        "quantity",
+                        "componentSlot",
+                        "explanation"
+                      ]
+                    }
+                  },
+                  "basis": {
+                    "type": "object",
+                    "description": "Choose one exact catalogue attribute and value supported by every product in this group. The application derives the visible group label.",
+                    "properties": {
+                      "attribute": {
+                        "type": "string",
+                        "enum": [
+                          "Catalog_WatchCaseSize",
+                          "Catalog_WatchCaseShape",
+                          "Catalog_WatchStyle",
+                          "Catalog_ProductType",
+                          "Catalog_RingType",
+                          "Catalog_EarringType",
+                          "Catalog_NecklaceType",
+                          "Catalog_GemstoneInformation.GemstoneColorGroup"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                      }
+                    },
+                    "required": [
+                      "attribute",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "basis",
+                  "items"
+                ]
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "alternatives": {
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "evidenceRef": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "objectID": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "contentHash": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 20
+                        },
+                        "componentSlot": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "evidenceRef",
+                        "objectID",
+                        "contentHash",
+                        "quantity",
+                        "componentSlot",
+                        "explanation"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "title",
+                  "lines"
+                ]
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "groups",
+        "alternatives"
+      ]
+    }
+  },
+  "required": [
+    "missionId",
+    "expectedStateRevision",
+    "expectedEvidenceBatchRevision",
+    "turnId",
+    "proposalId",
+    "body"
+  ]
+}

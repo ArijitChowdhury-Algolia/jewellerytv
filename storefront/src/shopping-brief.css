@@ -6,3 +6,5 @@
 
 .cb-panel[hidden]{display:none}.cb-panel-actions{display:flex;align-items:center;gap:6px;margin-bottom:8px}.cb-panel-actions button{display:flex;align-items:center;gap:6px;border:0;padding:8px}.cb-panel-actions .cb-close{margin-left:auto}.cb-count{font:inherit;font-variant-numeric:tabular-nums}.cb-chevron{transition:transform .15s}.cb-chevron-open{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.cb-chevron{transition:none}}
+
+.conversation-brief .cb-chip{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:5px;min-width:0;overflow:hidden}.conversation-brief .cb-chip button{border:0;border-radius:0;background:transparent;color:inherit}.conversation-brief .cb-chip-edit{flex:1;min-width:0;text-align:left;overflow-wrap:anywhere}.conversation-brief .cb-chip-remove{flex:0 0 44px;padding:8px;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--line)}.conversation-brief .cb-chip button:hover{background:var(--surface)}.conversation-brief .cb-chip button:focus-visible{outline-offset:-3px}

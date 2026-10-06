@@ -1,0 +1,322 @@
+.concierge-launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--blue);
+  background: var(--blue);
+  color: #fff;
+  border-radius: 2px;
+  font-weight: 700;
+}
+.concierge-workspace .concierge-preferences {
+  flex: 0 0 auto;
+  max-height: 45%;
+  overflow-y: auto;
+  min-width: 0;
+}
+.concierge-workspace .concierge-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.concierge-workspace.connected-concierge .conversation-column > .concierge-messages {
+  padding: 12px 20px;
+}
+.concierge-workspace .concierge-prompt {
+  flex: 0 0 auto;
+}
+.connected-new-conversation {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #ffffff99;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+}
+.connected-new-conversation:hover {
+  background: #ffffff20;
+}
+.concierge-workspace .concierge-preferences {
+  flex: 0 0 auto;
+  max-height: 45%;
+  overflow-y: auto;
+  min-width: 0;
+}
+.concierge-workspace .concierge-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.concierge-workspace .concierge-prompt {
+  flex: 0 0 auto;
+}
+.concierge-workspace-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.concierge-unavailable-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.36fr) minmax(0, 1fr);
+}
+.connected-concierge {
+  display: flex;
+  flex-direction: column;
+}
+.connected-header {
+  flex: none;
+}
+.connected-body {
+  min-height: 0;
+}
+.connected-conversation {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.connected-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 20px;
+}
+.connected-welcome {
+  padding: 18px 0;
+}
+.connected-welcome h2 {
+  margin-bottom: 10px;
+  font-size: 22px;
+  font-weight: 400;
+}
+.connected-welcome p {
+  max-width: 35ch;
+  line-height: 1.55;
+}
+.connected-message {
+  max-width: 92%;
+  margin: 0 0 13px;
+  padding: 11px 13px;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+.connected-user-message {
+  margin-left: auto;
+  background: #edf6fa;
+  color: #173e4b;
+}
+.connected-assistant-message {
+  margin: 16px 12px 28px 0;
+  max-width: min(100% - 12px, 62ch);
+  padding: 0 0 0 16px;
+  border: 0;
+  border-left: 2px solid #b8d0db;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+.connected-assistant-label {
+  display: block;
+  margin: 0 0 8px;
+  color: #527584;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+.connected-markdown {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.connected-markdown p,
+.connected-markdown ul,
+.connected-markdown ol {
+  margin: 0 0 0.7em;
+}
+.connected-markdown h2,
+.connected-markdown h3,
+.connected-markdown h4 {
+  margin: 0.8em 0 0.3em;
+  font-size: 1em;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.connected-markdown strong {
+  font-weight: 500;
+}
+.connected-markdown > :last-child {
+  margin-bottom: 0;
+}
+.connected-markdown ul,
+.connected-markdown ol {
+  padding-left: 1.3em;
+}
+.connected-system-notice {
+  border-left: 3px solid #a66a26;
+  background: #fff7eb;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+.connected-status {
+  margin: 0;
+  padding: 9px 20px;
+  color: var(--muted);
+  font-size: 13px;
+  border-top: 1px solid #e2e6e8;
+}
+.connected-stop {
+  align-self: flex-start;
+  margin: 0 20px 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #777;
+  background: #fff;
+}
+.connected-prompt {
+  border: 0;
+  background: #fff;
+  padding: 0;
+}
+.concierge-workspace.connected-concierge .concierge-prompt {
+  padding: 12px 20px;
+}
+.connected-prompt-row {
+  display: flex;
+  gap: 8px;
+}
+.connected-prompt input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #9caeb5;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+.connected-prompt button {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.connected-prompt button:disabled {
+  background: #b5c3c8;
+  border-color: #b5c3c8;
+}
+.connected-products {
+  padding: 22px 20px;
+  overflow: auto;
+  background: #fff;
+}
+.connected-products-header {
+  border-bottom: 1px solid #d4e0e6;
+  padding-bottom: 13px;
+  margin-bottom: 16px;
+}
+.connected-products h2 {
+  font-size: 21px;
+  font-weight: 400;
+  margin-bottom: 7px;
+}
+.connected-products-header p,
+.connected-products-empty,
+.connected-incomplete-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.connected-projected-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.connected-projected-card {
+  min-width: 0;
+}
+.connected-projected-card .product-card {
+  height: 100%;
+  border: 1px solid #d4e0e6;
+  padding: 8px;
+}
+.connected-projected-card .product-title {
+  white-space: normal;
+}
+.connected-card-group {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 3px 4px;
+}
+.connected-card-explanation {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0 3px 8px;
+}
+.connected-incomplete-note {
+  border-top: 1px solid #d4e0e6;
+  margin-top: 20px;
+  padding-top: 12px;
+}
+.connected-sections {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .connected-projected-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .concierge-launcher {
+    right: 16px;
+    bottom: 16px;
+  }
+  .concierge-unavailable-body {
+    display: flex;
+  }
+  .connected-concierge.concierge-panel {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+  .connected-sections {
+    display: flex;
+  }
+  .connected-body[data-section='conversation'] .connected-products {
+    display: none;
+  }
+  .connected-body[data-section='products'] .connected-conversation {
+    display: none;
+  }
+  .connected-conversation {
+    flex: 1;
+  }
+  .connected-products {
+    flex: 1;
+  }
+  .connected-projected-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .connected-messages {
+    padding: 18px 16px;
+  }
+  .connected-prompt {
+    padding: 0;
+  }
+}
+@media (max-width: 390px) {
+  .connected-projected-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connected-concierge * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

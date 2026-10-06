@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "scope": "pre-existing legacy source and tests",
+  "paths": ["server/**", "shared/**", "src/**", "tests/**"],
+  "excludedFromBaseline": ["server/config.ts", "shared/concierge/**", "tests/concierge/**"],
+  "rules": [
+    "@typescript-eslint/no-explicit-any",
+    "@typescript-eslint/no-unused-vars",
+    "@typescript-eslint/no-unsafe-argument",
+    "@typescript-eslint/no-unsafe-assignment",
+    "@typescript-eslint/no-unsafe-member-access",
+    "@typescript-eslint/no-unsafe-return",
+    "@typescript-eslint/no-unsafe-call",
+    "react-hooks/rules-of-hooks",
+    "react-hooks/exhaustive-deps"
+  ],
+  "reason": "The repository was already dirty before Task 1. The new Concierge namespace and environment boundary use strict rules; legacy debt remains recorded for a separate remediation pass.",
+  "reviewedOn": "2026-10-05"
+}
