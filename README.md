@@ -5,24 +5,23 @@ A protected JTV-style storefront for exploring jewelry through conversation. One
 **Status:** This repository is a handoff snapshot of the Plan 3.1 build. It is not an accepted production-quality shopping journey. An anniversary gift flow reached a saved shortlist, comparison, JTV blog guidance and a selected necklace. A two-piece look rendered with an exact $239.98 item subtotal. A later replacement suggested a bracelet with yellow-gold finish against an accepted dislike, and a corrected look was blocked by an output guardrail. Chat transcript continuity after reload and the full acceptance campaign remain open. No checkout, account or authoritative purchase verification is provided.
 
 **Protected hosted app:** [jewellerytv.vercel.app](https://jewellerytv.vercel.app)
+
 **GitHub:** [ArijitChowdhury-Algolia/jewellerytv](https://github.com/ArijitChowdhury-Algolia/jewellerytv)
 
 ## How it works
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#F5F5F7","primaryTextColor":"#000033","primaryBorderColor":"#0067F7","lineColor":"#0067F7","fontFamily":"Sora"}}}%%
-flowchart LR
-  shopper[Shopper] --> ui[JTV two-column UI]
-  ui -->|chat request| api[Local or Vercel API]
-  api -->|completion stream| agent[Concierge in Agent Studio]
-  agent -->|client tool call| callbacks[Browser tool callbacks]
-  callbacks -->|typed updates| state[Tab shopping state]
-  callbacks -->|read-only retrieval| evidence[Evidence API]
+flowchart TB
+  shopper[Shopper] --> ui[JTV chat and product workspace]
+  ui -->|chat| api[Local or Vercel API]
+  api -->|stream| agent[Concierge in Agent Studio]
+  agent -->|tool calls| callbacks[Three browser callbacks]
+  callbacks -->|update| state[Tab shopping state]
+  callbacks -->|retrieve| evidence[Read-only evidence API]
   evidence --> products[(prod_catalog)]
   evidence --> guidance[(blog)]
-  callbacks -->|validated choice after completed turn| workspace[Product workspace]
-  state --> ui
-  workspace --> ui
+  callbacks -->|present after completed turn| ui
 ```
 
 The Concierge owns interpretation, tone, questions, search decisions, curation and explanations. The application owns state, identity, source boundaries, exact arithmetic and display validation. Its three client-side tools are `update_shopping_state`, `retrieve_evidence` and `present_choices`. Product and blog indices and all index settings remain read-only. The app does not contain canned Concierge replies or a second conversational router.
