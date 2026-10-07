@@ -268,7 +268,10 @@ export function ConnectedShoppingBrief({
   );
 
   return (
-    <section className="conversation-brief" aria-label="Your preferences">
+    <section
+      className={controlsTarget && !expanded ? 'conversation-brief cb-empty' : 'conversation-brief'}
+      aria-label="Your preferences"
+    >
       {controlsTarget ? (
         createPortal(<div className="cb-controls">{controls}</div>, controlsTarget)
       ) : (

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 const boundedId = z.string().trim().min(1).max(150);
-const exactObjectId = z
+export const exactObjectId = z
   .string()
   .regex(
     /^[A-Za-z0-9][A-Za-z0-9._:-]{0,149}$/,

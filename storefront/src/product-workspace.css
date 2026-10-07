@@ -623,6 +623,37 @@
   max-width: 22ch;
   color: var(--text);
 }
+
+/* The tabs and their rail share one baseline. */
+.product-workspace .pw-views {
+  align-items: flex-end;
+  overflow-y: hidden;
+}
+.product-workspace .pw-views > button {
+  flex: 0 0 auto;
+  margin-bottom: -1px;
+  border: 1px solid var(--line);
+  border-bottom-width: 1px;
+  border-radius: 4px 4px 0 0;
+  background: #fff;
+}
+.product-workspace .pw-views > button[aria-current='page'] {
+  border-bottom: 3px solid var(--blue);
+}
+
+/* The final shelf is the end of this selection, not a divider before a missing row. */
+.pw-discovery-groups[data-group-count='1']
+  .pw-group-items:has(> .pw-product:nth-child(2))
+  > .pw-product,
+.pw-discovery-groups:not([data-group-count='1']) .pw-group-items > .pw-product:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.pw-discovery-groups[data-group-count='1']
+  .pw-group-items:has(> .pw-product:nth-child(2))
+  .pw-image {
+  block-size: clamp(220px, 34cqw, 350px);
+}
 .pw-empty-brand p {
   font-size: 15px;
   line-height: 1.6;

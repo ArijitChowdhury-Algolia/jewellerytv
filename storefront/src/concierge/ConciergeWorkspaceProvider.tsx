@@ -6,6 +6,7 @@ import type { StorageLike } from './sessionPersistence.js';
 import type { RetrieveEvidenceResult } from '../../shared/concierge/retrieval/types.js';
 import type { ShopperMessage } from '../../shared/concierge/state/updateShoppingState.js';
 import type { SourceBoundProduct } from '../../shared/concierge/sessionContract.js';
+import { createExactProductRefresh } from './exactProductRefresh.js';
 
 type Runtime = ReturnType<typeof createConciergeToolRuntime>;
 type Store = ReturnType<typeof createSessionStore>;
@@ -34,6 +35,7 @@ export function createConciergeWorkspaceSession(options: {
   initialMissionId: string;
   getCurrentShopperMessage: () => ShopperMessage | null;
   fetchEvidence: (body: unknown, signal?: AbortSignal) => Promise<RetrieveEvidenceResult>;
+  fetchExactProducts?: (body: unknown, signal?: AbortSignal) => Promise<RetrieveEvidenceResult>;
 }): ConciergeWorkspaceSession {
   const store = createSessionStore(options.storage, options.initialMissionId);
   const runtime = createConciergeToolRuntime({
@@ -43,17 +45,18 @@ export function createConciergeWorkspaceSession(options: {
       typeof createConciergeToolRuntime
     >[0]['fetchEvidence'],
   });
-  let refreshError = '';
-  async function unavailableRefresh() {
-    refreshError =
-      'Current catalogue details could not be refreshed. Previously saved information is still shown.';
-    const current = store.getSnapshot();
-    if (current)
-      await store.transact({
-        expectedRevision: current.brief.revision,
-        apply: (session) => session,
+  const fetchExactProducts =
+    options.fetchExactProducts ??
+    (async (body: unknown) => {
+      const response = await fetch('/api/agent-product-refresh', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
       });
-  }
+      if (!response.ok) throw new Error('Exact product refresh failed');
+      return (await response.json()) as RetrieveEvidenceResult;
+    });
+  const refresh = createExactProductRefresh(store, fetchExactProducts);
   function getModel(): WorkspaceViewModel {
     const session = store.getSnapshot();
     if (!session) {
@@ -72,7 +75,7 @@ export function createConciergeWorkspaceSession(options: {
         pin: disabled,
         remove: disabled,
         setQuantity: disabled,
-        refreshProducts: unavailableRefresh,
+        refreshProducts: refresh.refreshProducts,
         refreshing: false,
         refreshError: 'The saved session is unavailable. Workspace actions are disabled.',
         budgetCents: null,
@@ -203,9 +206,9 @@ export function createConciergeWorkspaceSession(options: {
             combinationQuantities: { ...current.combinationQuantities, [id]: quantity },
           }));
       },
-      refreshProducts: unavailableRefresh,
-      refreshing: false,
-      refreshError,
+      refreshProducts: refresh.refreshProducts,
+      refreshing: refresh.isRefreshing(),
+      refreshError: refresh.getError(),
       budgetCents:
         budgetFact?.value.kind === 'money' && budgetFact.value.currency === 'USD'
           ? budgetFact.value.cents

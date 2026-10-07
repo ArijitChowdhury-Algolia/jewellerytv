@@ -136,7 +136,10 @@ export function hashEvidenceRecord(record: Record<string, unknown>): string {
 export function evidenceRef(source: EvidenceSource, objectID: string, contentHash: string): string {
   return `${source}/${encodeURIComponent(objectID)}/${contentHash}`;
 }
-function projection(source: EvidenceSource, raw: Record<string, unknown>): Record<string, unknown> {
+export function projection(
+  source: EvidenceSource,
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
   const fields = source === 'blog' ? BLOG_PROJECTION : PRODUCT_PROJECTION;
   return Object.fromEntries(
     fields.filter((field) => Object.hasOwn(raw, field)).map((field) => [field, raw[field]]),
