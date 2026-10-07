@@ -1,14 +1,22 @@
 flowchart LR
-  User[Shopper] --> Chat[Conversation and guidance]
-  User --> Workspace[Discover / Compare / Saved / Combination]
-  Workspace --> Session[Per-tab selections and confirmed brief]
-  Session --> Context[Bounded turn context]
-  Context --> Chat
-  Chat --> API[Validated server API]
-  API --> Agent[Hosted concierge]
-  Agent --> Catalogue[Read-only catalogue]
-  Catalogue --> Curated[Retrieved records and curated IDs]
-  Curated --> Workspace
-  Agent --> Chat
-  Workspace --> API
-  API --> Catalogue
+  Shopper[Shopper] --> UI[Two-column JTV workspace]
+  UI --> SDK[InstantSearch Chat SDK]
+  SDK --> ChatAPI[Application /api/chat proxy]
+  ChatAPI --> Agent[One Agent Studio Concierge]
+  UI --> State[Per-tab shopping state]
+  State --> Context[Bounded latest-turn context]
+  Context --> Agent
+  Agent -->|SDK tool call| Update[update_shopping_state callback]
+  Update --> State
+  Agent -->|SDK tool call| Retrieve[retrieve_evidence callback]
+  Retrieve --> API[Read-only application API]
+  API --> Product[(prod_catalog)]
+  API --> Blog[(blog)]
+  API --> Retrieve
+  Retrieve --> Agent
+  Agent -->|SDK tool call| Present[present_choices callback]
+  Present --> Assess[Identity, constraint and subtotal checks]
+  Assess -->|completed turn only| UI
+  UI --> Refresh[Exact-ID refresh API]
+  Refresh --> Product
+  Refresh --> State

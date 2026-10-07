@@ -1,27 +1,300 @@
-.concierge-workspace.concierge-panel{width:min(1180px,calc(100vw - 48px));height:calc(100dvh - 112px);max-height:900px;right:24px;bottom:84px}
-.concierge-workspace-body{display:flex;flex:1;min-height:0;overflow:hidden}.conversation-column{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0}.concierge-workspace .conversation-column{flex:0 0 46%;border-right:1px solid #d4e0e6}.shopping-column{flex:1;min-width:0;overflow:auto;background:#fff}.workspace-sections{display:flex;justify-content:flex-end;background:#fff;border-bottom:1px solid #d4e0e6;gap:8px;padding:4px 18px}.workspace-sections button{border:0;background:transparent;min-height:44px;padding:8px 16px;color:#214653;font:inherit}.workspace-sections button[aria-pressed=true]{box-shadow:inset 0 -3px var(--blue);font-weight:bold}.brief-status,.brief-error{margin:12px 20px;font-size:14px}.brief-error{padding:12px;background:#fff6ec;color:#713d05}.brief-error button,.mission-reset button{min-height:44px;margin:4px;padding:8px 14px}.mission-reset{background:#fff6ec;padding:12px 20px;border-bottom:1px solid #dec19b}.concierge-workspace button:focus-visible,.concierge-workspace input:focus-visible,.concierge-workspace select:focus-visible{outline:3px solid #0076a9;outline-offset:3px}.concierge-workspace .product-title{white-space:normal;display:block;overflow:visible;line-height:1.45}.concierge-workspace .product-card{width:220px}.concierge-workspace .product-image-wrap{height:190px}.concierge-workspace .concierge-messages{padding:0}.concierge-workspace .ais-ChatMessages{padding:12px 20px}.concierge-workspace .ais-ChatMessage-message{max-width:100%}.concierge-prompt{background:white}
-@media(max-width:767px){.concierge-workspace.concierge-panel{inset:0;width:100%;height:100dvh;max-height:none;border-radius:0}.concierge-workspace-body[data-section=conversation] .shopping-column{display:none}.concierge-workspace-body[data-section=shopping] .conversation-column{display:none}.concierge-workspace .conversation-column{flex:1;border:0}.workspace-sections{justify-content:stretch}.workspace-sections button{flex:1}.concierge-workspace .concierge-messages{padding:0}.concierge-workspace .product-card{width:220px}.concierge-workspace .concierge-header .ais-ChatHeader{min-height:54px}}
-@media(prefers-reduced-motion:reduce){.concierge-workspace *{scroll-behavior:auto!important;transition:none!important}}
+.concierge-workspace.concierge-panel {
+  width: min(1180px, calc(100vw - 48px));
+  height: calc(100dvh - 112px);
+  max-height: 900px;
+  right: 24px;
+  bottom: 84px;
+}
+.concierge-workspace-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.conversation-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.concierge-workspace .conversation-column {
+  flex: 0 0 46%;
+  border-right: 0;
+  background: #f9fcfd;
+}
+.shopping-column {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: #fff;
+}
+.workspace-sections {
+  display: flex;
+  justify-content: flex-end;
+  background: #fff;
+  border-bottom: 1px solid #d4e0e6;
+  gap: 8px;
+  padding: 4px 18px;
+}
+.workspace-sections button {
+  border: 0;
+  background: transparent;
+  min-height: 44px;
+  padding: 8px 16px;
+  color: #214653;
+  font: inherit;
+}
+.workspace-sections button[aria-pressed='true'] {
+  box-shadow: inset 0 -3px var(--blue);
+  font-weight: bold;
+}
+.brief-status,
+.brief-error {
+  margin: 12px 20px;
+  font-size: 14px;
+}
+.brief-error {
+  padding: 12px;
+  background: #fff6ec;
+  color: #713d05;
+}
+.brief-error button,
+.mission-reset button {
+  min-height: 44px;
+  margin: 4px;
+  padding: 8px 14px;
+}
+.mission-reset {
+  background: #fff6ec;
+  padding: 12px 20px;
+  border-bottom: 1px solid #dec19b;
+}
+.concierge-workspace button:focus-visible,
+.concierge-workspace input:focus-visible,
+.concierge-workspace select:focus-visible {
+  outline: 3px solid #0076a9;
+  outline-offset: 3px;
+}
+.concierge-workspace .product-title {
+  white-space: normal;
+  display: block;
+  overflow: visible;
+  line-height: 1.45;
+}
+.concierge-workspace .product-card {
+  width: 220px;
+}
+.concierge-workspace .product-image-wrap {
+  height: 190px;
+}
+.concierge-workspace .concierge-messages {
+  padding: 0;
+}
+.concierge-workspace .ais-ChatMessages {
+  padding: 12px 20px;
+}
+.concierge-workspace .ais-ChatMessage-message {
+  max-width: 100%;
+}
+.concierge-prompt {
+  background: white;
+}
+@media (max-width: 767px) {
+  .concierge-workspace.concierge-panel {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+  .concierge-workspace-body[data-section='conversation'] .shopping-column {
+    display: none;
+  }
+  .concierge-workspace-body[data-section='shopping'] .conversation-column {
+    display: none;
+  }
+  .concierge-workspace .conversation-column {
+    flex: 1;
+    border: 0;
+  }
+  .workspace-sections {
+    justify-content: stretch;
+  }
+  .workspace-sections button {
+    flex: 1;
+  }
+  .concierge-workspace .concierge-messages {
+    padding: 0;
+  }
+  .concierge-workspace .product-card {
+    width: 220px;
+  }
+  .concierge-workspace .concierge-header .ais-ChatHeader {
+    min-height: 54px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .concierge-workspace * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
 /* A single mission-reset path clears chat and its brief while retaining saved pieces. */
-.concierge-workspace .ais-ChatHeader-clear{display:none}
-@media(min-width:768px){.workspace-sections{display:none}}
-@media(min-width:1024px){.concierge-workspace.concierge-panel{width:min(1440px,calc(100vw - 48px))}.concierge-workspace .conversation-column{flex-basis:36%}}
-.workspace-conversation p{line-height:1.65;margin:0 0 14px;white-space:pre-line}.workspace-product-link{border:0;background:transparent;color:var(--blue);text-decoration:underline;padding:8px 0;min-height:44px}
+.concierge-workspace .ais-ChatHeader-clear {
+  display: none;
+}
+@media (min-width: 768px) {
+  .workspace-sections {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .concierge-workspace.concierge-panel {
+    width: min(1440px, calc(100vw - 48px));
+  }
+  .concierge-workspace .conversation-column {
+    flex-basis: 36%;
+  }
+}
+.workspace-conversation p {
+  line-height: 1.65;
+  margin: 0 0 14px;
+  white-space: pre-line;
+}
+.workspace-product-link {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  text-decoration: underline;
+  padding: 8px 0;
+  min-height: 44px;
+}
 
 /* One header row owns utility actions; the two content columns start together. */
-.concierge-panel .concierge-header{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--blue);color:#fff;min-height:56px}
-.concierge-header .ais-ChatHeader{display:contents}
-.concierge-header .ais-ChatHeader-title{order:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.concierge-header .ais-ChatHeader-actions{order:2;flex:none}.concierge-header .ais-ChatHeader-actions button{min-height:44px;min-width:44px;color:inherit}
-.concierge-header-actions,.brief-header-controls,.cb-controls{display:flex;align-items:center;gap:4px}
-.concierge-header-actions{order:1;flex:none}
-.concierge-header-actions button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:44px;margin:0;padding:8px 10px;border:0;border-radius:4px;background:transparent;color:inherit;font:inherit;font-size:13px;text-decoration:none;cursor:pointer}
-.concierge-header-actions button:hover{background:#ffffff20}
-.concierge-header button:focus-visible{outline:2px solid white;outline-offset:-3px}
-.concierge-workspace .shopping-workspace{padding:0;min-height:100%}
-.concierge-workspace .concierge-welcome{padding:0;text-align:left}
-.concierge-welcome h2{margin:0 0 12px;font-size:22px}
-.concierge-welcome p{margin:0;line-height:1.6;max-width:38ch}
-@media(max-width:767px){.concierge-panel .concierge-header{gap:2px;padding:4px 8px}.concierge-header-actions button>span:not(.cb-sr){display:none}.concierge-header-actions button{padding:8px}.concierge-header .ais-ChatHeader-title{font-size:14px}.concierge-workspace .ais-ChatMessages{padding:12px 16px}}
+.concierge-panel .concierge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--blue);
+  color: #fff;
+  min-height: 56px;
+}
+.concierge-header .ais-ChatHeader {
+  display: contents;
+}
+.concierge-header .ais-ChatHeader-title {
+  order: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.concierge-header .ais-ChatHeader-actions {
+  order: 2;
+  flex: none;
+}
+.concierge-header .ais-ChatHeader-actions button {
+  min-height: 44px;
+  min-width: 44px;
+  color: inherit;
+}
+.concierge-header-actions,
+.brief-header-controls,
+.cb-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.concierge-header-actions {
+  order: 1;
+  flex: none;
+}
+.concierge-header-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.concierge-header-actions button:hover {
+  background: #ffffff20;
+}
+.concierge-header button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: -3px;
+}
+.concierge-workspace .shopping-workspace {
+  padding: 0;
+  min-height: 100%;
+}
+.concierge-workspace .concierge-welcome {
+  padding: 0;
+  text-align: left;
+}
+.concierge-welcome h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.concierge-welcome p {
+  margin: 0;
+  line-height: 1.6;
+  max-width: 38ch;
+}
+@media (max-width: 767px) {
+  .concierge-panel .concierge-header {
+    gap: 2px;
+    padding: 4px 8px;
+  }
+  .concierge-header-actions button > span:not(.cb-sr) {
+    display: none;
+  }
+  .concierge-header-actions button {
+    padding: 8px;
+  }
+  .concierge-header .ais-ChatHeader-title {
+    font-size: 14px;
+  }
+  .concierge-workspace .ais-ChatMessages {
+    padding: 12px 16px;
+  }
+}
 /* The header close action replaces the floating launcher while chat is open. */
-body:has(.concierge-panel) .ais-ChatToggleButton{display:none!important}
+body:has(.concierge-panel) .ais-ChatToggleButton {
+  display: none !important;
+}
+
+/* One conversation controls both panes, so its composer spans the modal. */
+.concierge-workspace .concierge-composer-footer {
+  flex: 0 0 auto;
+  min-width: 0;
+  background: #fff;
+  box-shadow: 0 -3px 10px rgb(17 58 76 / 8%);
+  position: relative;
+  z-index: 2;
+}
+.concierge-workspace .concierge-composer-footer .concierge-prompt {
+  border-top: 0;
+}
+@media (min-width: 768px) {
+  .concierge-workspace.connected-concierge .concierge-composer-footer .concierge-prompt {
+    padding-right: 64px;
+  }
+}
+.concierge-workspace .concierge-composer-footer .connected-status {
+  border-top: 0;
+  padding-bottom: 0;
+}

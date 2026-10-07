@@ -51,4 +51,22 @@ describe('approved Concierge workspace layout', () => {
     expect(html).toContain('data-section="shopping"');
     expect(html).toContain('aria-pressed="true"');
   });
+
+  it('keeps one shared composer and its status outside both scrollable columns', () => {
+    const html = renderToStaticMarkup(
+      <ConciergeWorkspaceLayout
+        headerActions={<button type="button">Close</button>}
+        messages={<p>Conversation</p>}
+        status={<p role="status">Searching</p>}
+        composer={<input aria-label="Message the Concierge" />}
+        productWorkspace={<p>Products</p>}
+        section="shopping"
+      />,
+    );
+    expect(html).toMatch(/<\/section><\/div><footer class="concierge-composer-footer">/);
+    expect(html).toMatch(
+      /<footer class="concierge-composer-footer"><p role="status">Searching<\/p>/,
+    );
+    expect(html.match(/aria-label="Message the Concierge"/g)).toHaveLength(1);
+  });
 });

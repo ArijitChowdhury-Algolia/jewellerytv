@@ -1,5 +1,7 @@
 # Concierge conversation evaluation v1
 
+> **Historical suite, October 6, 2026:** The live modes below were written for agents that have since been deleted. Do not run `run.py --live` or `brief_v2_live.py` as acceptance for the current Concierge. The current Plan 3.1 scaffold is in `concierge-phases-1-3/` and remains unexecuted; its local runner now distinguishes shopper turns from completion requests and uses Save/Compare controls, but still needs long-turn coverage and independent semantic review before a paid campaign. The 20 Python unit tests remain useful for their local invariants. One source-hash fixture for the retired brief-v2 evaluator is in `retired-brief-v2/extractor-spec.json`.
+
 This suite converts the Understanding and Discovery playbook into ten multi-turn families. It evaluates behaviour, not a particular wording or prescribed shopping sequence. Each turn has an observable review objective. Later turns reference an actual selected product ID; when none exists, the runner follows a recovery branch instead of inventing a product. No production index writes are implemented.
 
 ## Run

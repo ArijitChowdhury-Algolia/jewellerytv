@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -99,6 +100,79 @@ function messageText(message: UIMessage) {
     .map((part) => ('text' in part && typeof part.text === 'string' ? part.text : ''))
     .join('')
     .trim();
+}
+
+/** Persisted turns are shown after reload only when their final response is complete. */
+export function isRestoredAssistantMessage(message: UIMessage) {
+  if (message.role !== 'assistant') return false;
+  let hasFinalText = false;
+  for (const part of message.parts) {
+    if (part.type === 'text') {
+      if (part.state === 'streaming') return false;
+      if (typeof part.text === 'string' && part.text.trim()) hasFinalText = true;
+      continue;
+    }
+    if (
+      'state' in part &&
+      typeof part.type === 'string' &&
+      part.type.startsWith('tool-') &&
+      part.state !== 'output-available'
+    )
+      return false;
+  }
+  return hasFinalText && !messageText(message).startsWith('[System notice]');
+}
+
+export function getConnectedChatPersistenceOptions(missionId: string) {
+  return { id: missionId, persistence: true as const };
+}
+
+type CompletionReceipt = { version: 1; assistantMessageIds: string[] };
+
+function completionReceiptKey(missionId: string) {
+  return `jtv-concierge-completed-${missionId}`;
+}
+
+export function readCompletedAssistantMessageIds(storage: Storage, missionId: string) {
+  try {
+    const parsed = JSON.parse(
+      storage.getItem(completionReceiptKey(missionId)) ?? 'null',
+    ) as Partial<CompletionReceipt> | null;
+    return parsed?.version === 1 && Array.isArray(parsed.assistantMessageIds)
+      ? new Set(parsed.assistantMessageIds.filter((id): id is string => typeof id === 'string'))
+      : new Set<string>();
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export function recordCompletedAssistantMessage(
+  storage: Storage,
+  missionId: string,
+  assistantMessageId: string,
+) {
+  const ids = readCompletedAssistantMessageIds(storage, missionId);
+  ids.add(assistantMessageId);
+  try {
+    storage.setItem(
+      completionReceiptKey(missionId),
+      JSON.stringify({ version: 1, assistantMessageIds: [...ids] } satisfies CompletionReceipt),
+    );
+  } catch {
+    // Transcript persistence remains best effort when browser storage is unavailable.
+  }
+}
+
+export function clearCompletedAssistantMessages(storage: Storage, missionId: string) {
+  try {
+    storage.removeItem(completionReceiptKey(missionId));
+  } catch {
+    // Storage failures must not block the mission reset itself.
+  }
+}
+
+export function visibleConnectedTranscript(messages: UIMessage[], resetting: boolean) {
+  return resetting ? [] : messages;
 }
 
 function latestAssistant(messages: readonly UIMessage[]) {
@@ -337,6 +411,11 @@ export function ConnectedConcierge({
     });
   }, [context, session]);
 
+  const chatPersistenceOptions = useMemo(
+    () => getConnectedChatPersistenceOptions(snapshot?.missionId ?? ''),
+    [snapshot?.missionId],
+  );
+
   const onFinish = useCallback<ChatOnFinishCallback<UIMessage>>((value) => {
     finishRef.current = {
       messages: value.messages,
@@ -345,13 +424,29 @@ export function ConnectedConcierge({
     };
   }, []);
   const chat = useChat<UIMessage>({
+    ...chatPersistenceOptions,
     transport: { api: '/api/chat' },
     context: chatContext,
     tools,
-    persistence: false,
     onFinish,
     requiresSearch: false,
   });
+
+  const hydratedTranscriptId = useRef<string | null>(null);
+  useEffect(() => {
+    if (hydratedTranscriptId.current === chatPersistenceOptions.id) return;
+    hydratedTranscriptId.current = chatPersistenceOptions.id;
+    const completedIds = readCompletedAssistantMessageIds(safeStorage(), chatPersistenceOptions.id);
+    const restored = chat.messages.filter(
+      (message) => completedIds.has(message.id) && isRestoredAssistantMessage(message),
+    );
+    if (!restored.length) return;
+    setRevealed((previous) => {
+      const next = new Set(previous);
+      restored.forEach((message) => next.add(message.id));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [chat.messages, chatPersistenceOptions.id]);
 
   const onSystemNotice = useCallback((text: string) => {
     setSystemNotices((previous) => (previous.includes(text) ? previous : [...previous, text]));
@@ -400,7 +495,10 @@ export function ConnectedConcierge({
           }
           runtime.endTurn(turnId);
           const assistant = latestAssistant(messages);
-          if (assistant) setRevealed((previous) => new Set(previous).add(assistant.id));
+          if (assistant) {
+            recordCompletedAssistantMessage(safeStorage(), chatPersistenceOptions.id, assistant.id);
+            setRevealed((previous) => new Set(previous).add(assistant.id));
+          }
         } else {
           if (import.meta.env.DEV)
             console.warn('JTV Concierge turn incomplete', {
@@ -432,7 +530,7 @@ export function ConnectedConcierge({
         setPending(null);
       }
     },
-    [blocked, chat, onSystemNotice, pending, runtime],
+    [blocked, chat, chatPersistenceOptions.id, onSystemNotice, pending, runtime],
   );
 
   const stop = useCallback(() => {
@@ -440,6 +538,7 @@ export function ConnectedConcierge({
   }, [chat]);
   const startNewConversation = useCallback(async () => {
     if (resettingRef.current) return;
+    const previousMissionId = chatPersistenceOptions.id;
     setResetting(true);
     const result = await resetConnectedConversation(
       resettingRef,
@@ -464,6 +563,7 @@ export function ConnectedConcierge({
       );
       return;
     }
+    clearCompletedAssistantMessages(safeStorage(), previousMissionId);
     finishRef.current = null;
     shopperMessage.current = null;
     latestTurn.current = { turnId: '', sourceMessageId: '' };
@@ -473,8 +573,8 @@ export function ConnectedConcierge({
     setSystemNotices([]);
     setRevealed(new Set());
     setSection('conversation');
-  }, [chat, pending, runtime]);
-  const visibleMessages = chat.messages;
+  }, [chat, chatPersistenceOptions.id, pending, runtime]);
+  const visibleMessages = visibleConnectedTranscript(chat.messages, resetting);
   const status = pending
     ? chat.status === 'submitted'
       ? 'Sending to Concierge…'

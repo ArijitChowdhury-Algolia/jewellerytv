@@ -93,13 +93,15 @@ export function ConciergeWorkspaceLayout({
         <section className="conversation-column" aria-label="Conversation">
           {preferenceContent && <div className="concierge-preferences">{preferenceContent}</div>}
           <div className="concierge-messages">{messages}</div>
-          {status}
-          <div className="concierge-prompt">{composer}</div>
         </section>
         <section className="shopping-column" aria-label="Your shopping workspace">
           {productWorkspace}
         </section>
       </div>
+      <footer className="concierge-composer-footer">
+        {status}
+        <div className="concierge-prompt">{composer}</div>
+      </footer>
       <button
         type="button"
         className="concierge-window-resize"
