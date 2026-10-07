@@ -1,6 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import { once } from 'node:events';
 import { z } from 'zod';
 import { RequestTelemetry, productionTelemetryLogger, type TelemetryLogger } from './telemetry.js';
 import { runEvidenceRoute } from './concierge/evidenceRoute.js';
@@ -156,9 +155,17 @@ export function createApiHandler(options: ApiOptions) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     const telemetry = new RequestTelemetry(req.headers['x-jtv-request-id']);
     const abort = new AbortController();
-    req.on('aborted', () => abort.abort());
+    let clientDisconnected = false;
+    let stream = false;
+    req.on('aborted', () => {
+      clientDisconnected = true;
+      abort.abort();
+    });
     res.on('close', () => {
-      if (!res.writableEnded) abort.abort();
+      if (!res.writableEnded) {
+        clientDisconnected = true;
+        abort.abort();
+      }
     });
     const timeout = setTimeout(() => abort.abort(), 180_000);
     timeout.unref();
@@ -203,7 +210,6 @@ export function createApiHandler(options: ApiOptions) {
       }
       let path: string;
       let payload: unknown;
-      let stream = false;
       let method = 'POST';
       if (req.method === 'POST' && url.pathname === '/api/search') {
         const input = searchSchema.parse(await body(req));
@@ -274,11 +280,39 @@ export function createApiHandler(options: ApiOptions) {
           'server-timing': telemetry.timing(),
           'x-request-id': telemetry.requestId,
         });
-        await pipeline(Readable.fromWeb(response.body as any), res, { signal: abort.signal });
+        const reader = response.body.getReader();
+        let stopWaiting!: (reason?: unknown) => void;
+        const interrupted = new Promise<never>((_resolve, reject) => {
+          stopWaiting = reject;
+        });
+        const onAbort = () => stopWaiting(new Error('Stream interrupted'));
+        abort.signal.addEventListener('abort', onAbort, { once: true });
+        if (abort.signal.aborted) onAbort();
+        try {
+          for (;;) {
+            const { done, value } = await Promise.race([reader.read(), interrupted]);
+            if (done) break;
+            if (!res.write(value)) await once(res, 'drain', { signal: abort.signal });
+          }
+          res.end();
+        } finally {
+          abort.signal.removeEventListener('abort', onAbort);
+          if (abort.signal.aborted) void reader.cancel().catch(() => {});
+          try {
+            reader.releaseLock();
+          } catch {
+            // A timed-out read is still settling; cancelling above releases it.
+          }
+        }
       } else reply(res, 200, await response.json());
     } catch (error) {
       if (res.headersSent) {
-        res.destroy();
+        if (stream && !clientDisconnected && !res.destroyed && !res.writableEnded) {
+          // The UI-message parser recognizes this error event and rejects the
+          // provisional turn. Do not claim a successful finish or expose upstream text.
+          res.write('data: {"type":"error","errorText":"Concierge stream interrupted"}\n\n');
+          res.end('data: [DONE]\n\n');
+        } else if (!res.destroyed && !res.writableEnded) res.destroy();
         return;
       }
       if (error instanceof z.ZodError || error instanceof SyntaxError || error instanceof URIError)
