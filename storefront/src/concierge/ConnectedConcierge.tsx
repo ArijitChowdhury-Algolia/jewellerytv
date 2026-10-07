@@ -22,6 +22,7 @@ import type { RetrieveEvidenceResult } from '../../shared/concierge/retrieval/ty
 import type { ShopperMessage } from '../../shared/concierge/state/updateShoppingState.js';
 import { applyBriefOperationsV3, undoBriefV3 } from '../../shared/briefState.js';
 import { buildTurnContext } from './turnContext.js';
+import { canonicalBlogUrlsFromMessages, verifiedBlogHref } from './verifiedBlogLinks.js';
 
 type TurnFinish = {
   messages: UIMessage[];
@@ -211,10 +212,12 @@ export function ConversationMessage({
   message,
   revealed,
   onProductLink,
+  verifiedBlogUrls,
 }: {
   message: UIMessage;
   revealed: boolean;
   onProductLink?: (id: string, event: MouseEvent<HTMLAnchorElement>) => void;
+  verifiedBlogUrls?: ReadonlySet<string>;
 }) {
   const text = messageText(message);
   if (!text) return null;
@@ -239,26 +242,32 @@ export function ConversationMessage({
                 href?: string;
                 children?: ReactNode;
                 [key: string]: unknown;
-              }) => (
-                <a
-                  {...props}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(event) => {
-                    const match = href?.match(/^\/product\/([^/?#]+)$/);
-                    if (match && onProductLink) {
-                      try {
-                        onProductLink(decodeURIComponent(match[1]), event);
-                      } catch {
-                        /* retain normal PDP navigation */
+              }) => {
+                const productHref = href?.match(/^\/product\/[^/?#]+$/) ? href : null;
+                const articleHref = verifiedBlogHref(href, verifiedBlogUrls ?? new Set());
+                const safeHref = productHref ?? articleHref;
+                if (!safeHref) return <span>{children}</span>;
+                return (
+                  <a
+                    {...props}
+                    href={safeHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => {
+                      const match = productHref?.match(/^\/product\/([^/?#]+)$/);
+                      if (match && onProductLink) {
+                        try {
+                          onProductLink(decodeURIComponent(match[1]), event);
+                        } catch {
+                          /* retain normal PDP navigation */
+                        }
                       }
-                    }
-                  }}
-                >
-                  {children}
-                </a>
-              ),
+                    }}
+                  >
+                    {children}
+                  </a>
+                );
+              },
             },
           },
         }}
@@ -575,6 +584,11 @@ export function ConnectedConcierge({
     setSection('conversation');
   }, [chat, chatPersistenceOptions.id, pending, runtime]);
   const visibleMessages = visibleConnectedTranscript(chat.messages, resetting);
+  const verifiedBlogUrls = useMemo(
+    () =>
+      canonicalBlogUrlsFromMessages(visibleMessages.filter((message) => revealed.has(message.id))),
+    [visibleMessages, revealed],
+  );
   const status = pending
     ? chat.status === 'submitted'
       ? 'Sending to Concierge…'
@@ -633,8 +647,10 @@ export function ConnectedConcierge({
         <>
           {!visibleMessages.length && (
             <div className="connected-welcome">
-              <h2>What can I help you find?</h2>
-              <p>Tell me who you are shopping for or what caught your eye.</p>
+              <h2>
+                Jewelry you’ll love.
+                <br />A little help finding it.
+              </h2>
             </div>
           )}
           {visibleMessages.map((message) => (
@@ -643,6 +659,7 @@ export function ConnectedConcierge({
               message={message}
               revealed={revealed.has(message.id)}
               onProductLink={handleProductLink}
+              verifiedBlogUrls={verifiedBlogUrls}
             />
           ))}
           {systemNotices.map((notice) => (
@@ -685,7 +702,18 @@ export function ConnectedConcierge({
           )}
         </form>
       }
-      productWorkspace={<ShoppingWorkspace model={model} focusProductId={focusProductId} />}
+      productWorkspace={
+        <ShoppingWorkspace
+          model={model}
+          focusProductId={focusProductId}
+          onStart={() => {
+            setSection('conversation');
+            requestAnimationFrame(() =>
+              document.getElementById('connected-concierge-input')?.focus(),
+            );
+          }}
+        />
+      }
     />
   );
 }

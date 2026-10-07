@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BRIEF_FIELDS } from './shopping.js';
 import { MONEY_OPERATORS, moneyOperatorLabel } from './moneyBounds.js';
+import { MATERIAL_ALTERNATIVE_PURITIES } from './concierge/catalogueFactContract.js';
 const id = z.string().min(1).max(300);
 export const briefValueSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), text: z.string().min(1).max(500) }).strict(),
@@ -122,7 +123,7 @@ const materialAlternativesValueSchema = z
           .object({
             type: z.enum(['Gold', 'Silver']).nullable(),
             color: z.enum(['White']).nullable(),
-            purity: z.enum(['Sterling']).nullable(),
+            purity: z.enum(MATERIAL_ALTERNATIVE_PURITIES).nullable(),
             plating: z
               .object({
                 presence: z.enum(['required', 'forbidden']),

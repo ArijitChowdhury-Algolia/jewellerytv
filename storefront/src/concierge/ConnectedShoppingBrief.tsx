@@ -7,6 +7,7 @@ import {
   type BriefFactV3Input,
   type BriefStateV3,
 } from '../../shared/briefSchema.js';
+import { MATERIAL_ALTERNATIVE_PURITIES } from '../../shared/concierge/catalogueFactContract.js';
 import '../shopping-brief.css';
 
 const EDITABLE_FIELDS = [
@@ -439,7 +440,11 @@ export function ConnectedShoppingBrief({
                         }
                       >
                         <option value="">Unknown</option>
-                        <option value="Sterling">Sterling</option>
+                        {MATERIAL_ALTERNATIVE_PURITIES.map((purity) => (
+                          <option value={purity} key={purity}>
+                            {purity}
+                          </option>
+                        ))}
                       </select>
                     </label>
                     <label>

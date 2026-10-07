@@ -30,8 +30,8 @@ const brief: BriefStateV3 = {
       value: {
         kind: 'material_alternatives',
         alternatives: [
-          { type: 'Silver', color: null, purity: null, plating: null },
-          { type: 'Gold', color: 'White', purity: 'Sterling', plating: null },
+          { type: 'Silver', color: null, purity: 'Sterling', plating: null },
+          { type: 'Gold', color: 'White', purity: '14K', plating: null },
         ],
       },
       scope: { kind: 'item', key: 'necklace' },
@@ -77,7 +77,7 @@ describe('v3 Connected Preferences', () => {
     );
     expect(html).toContain('Preferences (3)');
     expect(html).toContain('$500.00 total');
-    expect(html).toContain('Silver or Gold White Sterling');
+    expect(html).toContain('Silver Sterling or Gold White 14K');
     expect(html).toContain('No Hearts or Stars');
     expect(html).toContain('necklace');
     expect(html).not.toContain('ShoppingProvider');

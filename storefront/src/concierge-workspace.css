@@ -289,11 +289,6 @@ body:has(.concierge-panel) .ais-ChatToggleButton {
 .concierge-workspace .concierge-composer-footer .concierge-prompt {
   border-top: 0;
 }
-@media (min-width: 768px) {
-  .concierge-workspace.connected-concierge .concierge-composer-footer .concierge-prompt {
-    padding-right: 64px;
-  }
-}
 .concierge-workspace .concierge-composer-footer .connected-status {
   border-top: 0;
   padding-bottom: 0;

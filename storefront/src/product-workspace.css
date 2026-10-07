@@ -136,13 +136,59 @@
 .pw-compare-product {
   min-width: 0;
 }
+.pw-comparison[data-view='compare'] {
+  align-items: stretch;
+  grid-template-rows: repeat(10, auto);
+}
+.pw-comparison[data-view='compare'] .pw-compare-product {
+  display: grid;
+  grid-row: span 10;
+  grid-template-rows: subgrid;
+  min-width: 0;
+}
+.pw-comparison[data-view='compare'] .pw-compare-image {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+}
+.pw-comparison[data-view='compare'] .pw-compare-image .pw-image {
+  width: 100%;
+  aspect-ratio: auto;
+  block-size: clamp(120px, 16vw, 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pw-comparison[data-view='compare'] .pw-compare-image .pw-image img {
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: 100%;
+  max-block-size: 100%;
+  object-fit: contain;
+}
+.pw-comparison[data-view='compare'] .pw-compare-product > h3 {
+  align-self: start;
+  margin: 0;
+}
+.pw-comparison[data-view='compare'] .pw-compare-product > .pw-price {
+  margin: 0;
+}
+.pw-comparison[data-view='compare'] .pw-compare-assessment {
+  min-width: 0;
+}
+.pw-comparison[data-view='compare'] .pw-compare-attributes {
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  min-width: 0;
+  margin: 0;
+}
 .pw-compare-product dl {
   margin: 20px 0;
 }
 .pw-compare-product dl > div {
   border-top: 1px solid var(--line);
   padding: 10px 0;
-  min-height: 76px;
   font-size: 13px;
 }
 .pw-compare-product dt {
@@ -153,7 +199,15 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
-.pw-compare-product > button {
+.pw-compare-actions {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.pw-compare-actions > .pw-actions {
+  margin: 0;
+}
+.pw-compare-actions > .pw-compare-remove {
   width: 100%;
   font-size: 12px;
 }
@@ -614,13 +668,12 @@
   padding: 32px 16px;
   text-align: center;
 }
-.pw-empty-brand h2 {
-  font-size: clamp(24px, 2.4vw, 34px);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  margin: 0 0 18px;
+.pw-empty-brand .pw-empty-kicker {
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  margin: 0 0 16px;
   font-weight: 700;
-  max-width: 22ch;
   color: var(--text);
 }
 
@@ -655,17 +708,45 @@
   block-size: clamp(220px, 34cqw, 350px);
 }
 .pw-empty-brand p {
-  font-size: 15px;
-  line-height: 1.6;
-  max-width: 34ch;
+  font-size: clamp(16px, 1.7vw, 20px);
+  line-height: 1.5;
+  max-width: 30ch;
   margin: 0;
+  color: var(--text);
+}
+.pw-empty-instruction p {
+  font-size: 15px;
   color: var(--muted);
+}
+.pw-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 28px;
+  padding: 8px 26px;
+  border: 1px solid var(--text);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+}
+.pw-empty-cta:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.pw-empty-cta:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
 }
 @media (max-width: 767px) {
   .pw-empty-brand {
     padding: 24px 8px;
   }
-  .pw-empty-brand h2 {
-    font-size: 28px;
+  .pw-empty-brand p {
+    font-size: 17px;
   }
 }

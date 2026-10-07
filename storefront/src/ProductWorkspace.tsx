@@ -111,13 +111,26 @@ function ProductImage({ product, binding }: { product: Product; binding?: Worksp
     </div>
   );
 }
-function EmptyProducts({ hint }: { hint: string }) {
+function DiscoverWelcome({ onStart }: { onStart?: () => void }) {
   return (
     <div className="pw-empty-brand">
-      <h2>
-        Jewelry you’ll love.
-        <br />A little help finding it.
-      </h2>
+      <h2 className="pw-empty-kicker">MAKE IT YOURS</h2>
+      <p>Discover a new favorite in every shade, stone and style.</p>
+      {onStart ? (
+        <button className="pw-empty-cta" type="button" onClick={onStart}>
+          SHOP NOW
+        </button>
+      ) : (
+        <a className="pw-empty-cta" href="/search">
+          SHOP NOW
+        </a>
+      )}
+    </div>
+  );
+}
+function EmptyProducts({ hint }: { hint: string }) {
+  return (
+    <div className="pw-empty-brand pw-empty-instruction">
       <p>{hint}</p>
     </div>
   );
@@ -131,10 +144,12 @@ function Price({ product }: { product: Product }) {
 }
 export function ProductWorkspace({
   onAsk,
+  onStart,
   model,
   focusProductId,
 }: {
   onAsk?: (text: string) => void;
+  onStart?: () => void;
   model?: WorkspaceViewModel;
   focusProductId?: string | null;
 }) {
@@ -386,7 +401,7 @@ export function ProductWorkspace({
       {!activePreview && view === 'discover' && (
         <div className="pw-discover">
           {!discoveries.length ? (
-            <EmptyProducts hint="Discover a new favorite in every shade, stone and style." />
+            <DiscoverWelcome onStart={onStart} />
           ) : (
             <div className="pw-discovery-groups" data-group-count={groupedDiscoveries.length}>
               {groupedDiscoveries.map((group, index) => (
@@ -467,15 +482,17 @@ export function ProductWorkspace({
                   }
                 />
               </p>
-              <div className="pw-comparison" data-count={selected.length}>
+              <div className="pw-comparison" data-count={selected.length} data-view={view}>
                 {selected.map(({ product: p, quantity }) => (
-                  <article className="pw-compare-product" key={p.id}>
-                    <ProductImage product={p} binding={imageBinding(p)} />
+                  <article className="pw-compare-product" key={p.id} data-product-id={p.id}>
+                    <div className="pw-compare-image">
+                      <ProductImage product={p} binding={imageBinding(p)} />
+                    </div>
                     <h3>{p.title}</h3>
                     <Price product={p} />
-                    {assessment(p)}
+                    <div className="pw-compare-assessment">{assessment(p)}</div>
                     {view === 'compare' ? (
-                      <dl>
+                      <dl className="pw-compare-attributes">
                         {[
                           ['Brand', p.brand],
                           ...[
@@ -508,34 +525,37 @@ export function ProductWorkspace({
                         </select>
                       </label>
                     )}
-                    <div className="pw-actions">
+                    <div className="pw-compare-actions">
+                      <div className="pw-actions">
+                        <button
+                          onClick={() => {
+                            setPreviewId(p.id);
+                            void s.refreshProducts([p.id]);
+                          }}
+                        >
+                          View details
+                        </button>
+                        <button
+                          onClick={() =>
+                            s.products.some((x) => x.product.id === p.id)
+                              ? s.remove(p.id)
+                              : s.pin(p.raw)
+                          }
+                        >
+                          {s.products.some((x) => x.product.id === p.id)
+                            ? 'Remove from saved'
+                            : 'Save piece'}
+                        </button>
+                      </div>
                       <button
-                        onClick={() => {
-                          setPreviewId(p.id);
-                          void s.refreshProducts([p.id]);
-                        }}
-                      >
-                        View details
-                      </button>
-                      <button
+                        className="pw-compare-remove"
                         onClick={() =>
-                          s.products.some((x) => x.product.id === p.id)
-                            ? s.remove(p.id)
-                            : s.pin(p.raw)
+                          view === 'compare' ? s.toggleCompare(p.id) : s.toggleCombination(p.id)
                         }
                       >
-                        {s.products.some((x) => x.product.id === p.id)
-                          ? 'Remove from saved'
-                          : 'Save piece'}
+                        Remove from {view === 'compare' ? 'comparison' : 'combination'}
                       </button>
                     </div>
-                    <button
-                      onClick={() =>
-                        view === 'compare' ? s.toggleCompare(p.id) : s.toggleCombination(p.id)
-                      }
-                    >
-                      Remove from {view === 'compare' ? 'comparison' : 'combination'}
-                    </button>
                   </article>
                 ))}
               </div>
