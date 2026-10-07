@@ -51,13 +51,31 @@
 }
 
 .concierge-window-resize {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #24536a;
   cursor: nwse-resize;
   touch-action: none;
 }
 
 .concierge-window-resize:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid #0076a9;
   outline-offset: -3px;
+}
+
+.concierge-workspace--maximized .concierge-window-resize {
+  display: none;
 }
 
 .concierge-workspace.concierge-panel.concierge-workspace--maximized {
