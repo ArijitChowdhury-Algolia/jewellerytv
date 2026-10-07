@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title description">
+  <title id="title">JTV Concierge workflow</title>
+  <desc id="description">A shopper uses the two-column workspace. The app streams through its API to one Agent Studio Concierge. The agent calls browser tools to update tab state, retrieve read-only catalogue and blog evidence, and validate product choices before the UI displays completed cards.</desc>
+  <!-- Static GitHub rendering of architecture.mmd. Update both when the workflow changes. -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="#0067F7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="680" rx="24" fill="#fff"/>
+  <text x="40" y="56" fill="#000033" font-family="Arial, sans-serif" font-size="28" font-weight="700">JTV Concierge workflow</text>
+  <text x="40" y="87" fill="#42526b" font-family="Arial, sans-serif" font-size="17">One conversational agent. Three validated browser tools. Read-only product and blog evidence.</text>
+
+  <g fill="#f5f5f7" stroke="#0067F7" stroke-width="2">
+    <rect x="40" y="130" width="200" height="92" rx="12"/>
+    <rect x="290" y="130" width="200" height="92" rx="12"/>
+    <rect x="540" y="130" width="200" height="92" rx="12"/>
+    <rect x="790" y="130" width="370" height="92" rx="12"/>
+    <rect x="790" y="288" width="370" height="76" rx="12"/>
+    <rect x="40" y="452" width="330" height="82" rx="12"/>
+    <rect x="435" y="452" width="330" height="82" rx="12"/>
+    <rect x="830" y="452" width="330" height="82" rx="12"/>
+    <rect x="40" y="584" width="330" height="60" rx="12"/>
+    <rect x="435" y="584" width="330" height="60" rx="12"/>
+    <rect x="830" y="584" width="330" height="60" rx="12"/>
+  </g>
+
+  <g fill="none" stroke="#0067F7" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M241 176 H282"/>
+    <path d="M491 176 H532"/>
+    <path d="M741 176 H782"/>
+    <path d="M975 223 V280"/>
+    <path d="M975 365 V405 H205 V444"/>
+    <path d="M975 365 V405 H600 V444"/>
+    <path d="M975 365 V444"/>
+    <path d="M205 535 V576"/>
+    <path d="M600 535 V576"/>
+    <path d="M995 535 V576"/>
+  </g>
+
+  <g fill="#000033" font-family="Arial, sans-serif" font-size="21" font-weight="700" text-anchor="middle">
+    <text x="140" y="182">Shopper</text>
+    <text x="390" y="169"><tspan x="390">Two-column UI</tspan><tspan x="390" dy="26">InstantSearch SDK</tspan></text>
+    <text x="640" y="169"><tspan x="640">Application</tspan><tspan x="640" dy="26">chat API</tspan></text>
+    <text x="975" y="169"><tspan x="975">Agent Studio</tspan><tspan x="975" dy="26">Concierge</tspan></text>
+    <text x="975" y="335">Browser callbacks</text>
+    <text x="205" y="488">update_shopping_state</text>
+    <text x="600" y="488">retrieve_evidence</text>
+    <text x="995" y="488">present_choices</text>
+  </g>
+  <g fill="#34415e" font-family="Arial, sans-serif" font-size="17" text-anchor="middle">
+    <text x="205" y="622">Tab state + bounded context</text>
+    <text x="600" y="609"><tspan x="600">Read-only exact-ID API</tspan><tspan x="600" dy="21">prod_catalog + blog</tspan></text>
+    <text x="995" y="609"><tspan x="995">Identity, constraints, cents</tspan><tspan x="995" dy="21">Completed cards to UI</tspan></text>
+  </g>
+</svg>

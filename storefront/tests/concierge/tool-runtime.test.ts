@@ -700,6 +700,141 @@ describe('API-only Concierge client tool runtime', () => {
     expect(runtime.finishTurn('turn-1', 'completed')).toBeNull();
   });
 
+  it('reports when a staged presentation is cleared by a later brief update', async () => {
+    const storage = memoryStorage();
+    const sessionStore = createSessionStore(storage, 'mission-1');
+    const runtime = createConciergeToolRuntime({
+      storage,
+      sessionStore,
+      initialMissionId: 'mission-1',
+      getCurrentShopperMessage: () => shopper,
+      fetchEvidence: async ({ input }) => ({
+        status: 'ok',
+        source: 'prod_catalog',
+        missionId: 'mission-1',
+        revision: input.expectedRevision,
+        expectedRevision: input.expectedRevision,
+        turnId: 'turn-1',
+        effectiveFilters: [],
+        unresolved: [],
+        records: [evidence],
+      }),
+    });
+    await runtime.update(stateInput);
+    runtime.beginTurn('turn-1', shopper.id);
+    const retrieved = await runtime.retrieveSemantic(
+      {
+        source: 'prod_catalog',
+        query: 'ring',
+        count: 3,
+        target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' },
+      },
+      'retrieve-call',
+    );
+    expect(retrieved.status).toBe('ok');
+    if (!('records' in retrieved)) return;
+    const presented = await runtime.presentSemantic(
+      {
+        body: {
+          kind: 'product_groups',
+          alternatives: null,
+          groups: [
+            {
+              basis: { attribute: 'Catalog_ProductType', value: 'Ring' },
+              items: [
+                {
+                  evidenceRef: retrieved.records[0].evidenceRef,
+                  quantity: 1,
+                  componentSlot: 'ring',
+                  explanation: 'A restrained option',
+                },
+              ],
+            },
+          ],
+        },
+      },
+      'present-call',
+    );
+    expect(presented.status).toBe('staged');
+
+    const updated = await runtime.updateSemantic(
+      {
+        operations: [
+          {
+            action: 'add',
+            factIds: [],
+            sourceQuote: 'under $100',
+            fact: {
+              id: 'budget-100',
+              field: 'budget',
+              value: {
+                kind: 'money',
+                cents: 10000,
+                currency: 'USD',
+                operator: 'lte',
+                basis: 'total',
+              },
+              scope: { kind: 'mission', key: null },
+              strength: 'requirement',
+              certainty: 'explicit',
+            },
+          },
+        ],
+      },
+      'operation-2',
+    );
+    expect(updated).toMatchObject({
+      status: 'applied',
+      presentationInvalidated: true,
+      nextAction: 'retrieve_and_present_again',
+    });
+    expect(await runtime.finishTurnAndPersist('turn-1', 'completed')).toBeNull();
+    expect(runtime.getLastFinishDiagnostic()).toEqual({
+      status: 'rejected',
+      reason: 'no_staged_proposal',
+    });
+
+    const refreshed = await runtime.retrieveSemantic(
+      {
+        source: 'prod_catalog',
+        query: 'ring',
+        count: 3,
+        target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' },
+      },
+      'retrieve-call-2',
+    );
+    expect(refreshed.status).toBe('ok');
+    if (!('records' in refreshed)) return;
+    const restaged = await runtime.presentSemantic(
+      {
+        body: {
+          kind: 'product_groups',
+          alternatives: null,
+          groups: [
+            {
+              basis: { attribute: 'Catalog_ProductType', value: 'Ring' },
+              items: [
+                {
+                  evidenceRef: refreshed.records[0].evidenceRef,
+                  quantity: 1,
+                  componentSlot: 'ring',
+                  explanation: 'A restrained option within the updated budget',
+                },
+              ],
+            },
+          ],
+        },
+      },
+      'present-call-2',
+    );
+    expect(restaged.status).toBe('staged');
+    expect(await runtime.finishTurnAndPersist('turn-1', 'completed')).not.toBeNull();
+    expect(runtime.getLastFinishDiagnostic()).toEqual({ status: 'committed' });
+    expect(sessionStore.getSnapshot()?.committedProposal?.groups[0].lines[0].objectID).toBe(
+      'ring-1',
+    );
+  });
+
   it('discards a late retrieval after a manual revision change', async () => {
     let complete!: (value: RetrieveEvidenceResult) => void;
     const pending = new Promise<RetrieveEvidenceResult>((resolve) => {

@@ -2,9 +2,95 @@ import { describe, expect, it } from 'vitest';
 import type { UIMessage } from 'instantsearch.js/es/lib/ai-lite';
 import {
   canSubmitConnectedTurn,
+  connectedProgressLabel,
   getConnectedTurnSystemNotice,
   resetConnectedConversation,
 } from '../../src/concierge/ConnectedConcierge';
+
+describe('connected Concierge progress', () => {
+  const user = { id: 'shopper-1', role: 'user', parts: [{ type: 'text', text: 'Find earrings' }] };
+  const withPart = (part: Record<string, unknown>) =>
+    [user, { id: 'assistant-1', role: 'assistant', parts: [part] }] as UIMessage[];
+
+  it('uses the SDK state until the current turn reports a real event', () => {
+    expect(connectedProgressLabel('submitted', [], 'shopper-1')).toBe('Sending to Concierge');
+    expect(connectedProgressLabel('streaming', [user] as UIMessage[], 'shopper-1')).toBe(
+      'Concierge is working',
+    );
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        withPart({ type: 'tool-retrieve_evidence', state: 'input-available' }),
+        'another-shopper',
+      ),
+    ).toBe('Concierge is working');
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        [
+          ...withPart({ type: 'tool-retrieve_evidence', state: 'input-available' }),
+          { id: 'shopper-2', role: 'user', parts: [{ type: 'text', text: 'Now show rings' }] },
+        ] as UIMessage[],
+        'shopper-2',
+      ),
+    ).toBe('Concierge is working');
+  });
+
+  it('changes wording for current-turn tool and reply events', () => {
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        withPart({ type: 'tool-update_shopping_state', state: 'input-available' }),
+        'shopper-1',
+      ),
+    ).toBe('Updating preferences');
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        withPart({ type: 'tool-retrieve_evidence', state: 'input-available' }),
+        'shopper-1',
+      ),
+    ).toBe('Checking JTV information');
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        withPart({ type: 'tool-present_choices', state: 'input-available' }),
+        'shopper-1',
+      ),
+    ).toBe('Preparing product choices');
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        withPart({ type: 'text', state: 'streaming', text: 'A thought' }),
+        'shopper-1',
+      ),
+    ).toBe('Concierge is replying');
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        withPart({ type: 'tool-retrieve_evidence', state: 'output-available' }),
+        'shopper-1',
+      ),
+    ).toBe('Continuing your request');
+    expect(
+      connectedProgressLabel(
+        'streaming',
+        [
+          user,
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            parts: [
+              { type: 'tool-update_shopping_state', state: 'output-available' },
+              { type: 'tool-retrieve_evidence', state: 'input-available' },
+            ],
+          },
+        ] as UIMessage[],
+        'shopper-1',
+      ),
+    ).toBe('Checking JTV information');
+  });
+});
 
 describe('connected Concierge reset gate', () => {
   it('blocks an immediate send while New conversation persistence is settling', () => {

@@ -228,7 +228,7 @@ describe('API-only present_choices staging', () => {
     });
   });
 
-  it('supports three product groups of three items and quantity line arithmetic', () => {
+  it('keeps unknown group arithmetic unresolved across multiple groups', () => {
     const input = {
       ...groupsInput,
       body: {
@@ -251,6 +251,102 @@ describe('API-only present_choices staging', () => {
     if (result.status !== 'staged') return;
     expect(result.proposal.groups[0].itemSubtotalCents).toBeNull();
     expect(result.proposal.combinedItemSubtotalCents).toBeNull();
+  });
+
+  it('stages nine distinct products in three catalogue-backed style groups', () => {
+    const styles = ['Strand', 'Link', 'Bangle'];
+    const nineRecords = styles.flatMap((style, groupIndex) =>
+      Array.from({ length: 3 }, (_, itemIndex) => {
+        const objectID = `bracelet-${groupIndex}-${itemIndex}`;
+        return baseRecord(objectID, 100 + itemIndex, {
+          Catalog_ProductType: 'Bracelet',
+          Catalog_BraceletType: [style],
+          Catalog_TitleDescription: `${style} bracelet variation ${itemIndex + 1}`,
+        });
+      }),
+    );
+    const result = presentChoices(
+      {
+        ...groupsInput,
+        body: {
+          kind: 'product_groups',
+          alternatives: null,
+          groups: styles.map((style, groupIndex) => ({
+            basis: { attribute: 'Catalog_BraceletType', value: style },
+            items: Array.from({ length: 3 }, (_, itemIndex) =>
+              line(`bracelet-${groupIndex}-${itemIndex}`, 'bracelet'),
+            ),
+          })),
+        },
+      },
+      context({ evidence: nineRecords }),
+    );
+    expect(result).toMatchObject({ status: 'staged' });
+    if (result.status !== 'staged') return;
+    expect(result.proposal.groups).toHaveLength(3);
+    expect(result.proposal.groups.map((group) => group.lines.length)).toEqual([3, 3, 3]);
+    expect(
+      new Set(result.proposal.groups.flatMap((group) => group.lines.map((item) => item.objectID)))
+        .size,
+    ).toBe(9);
+  });
+
+  it('accepts catalogue-backed bracelet styles and rejects a mismatched variation', () => {
+    const braceletEvidence = [
+      baseRecord('strand-a', 325, {
+        Catalog_ProductType: 'Bracelet',
+        Catalog_BraceletType: ['Strand'],
+      }),
+      baseRecord('strand-b', 340, {
+        Catalog_ProductType: 'Bracelet',
+        Catalog_BraceletType: ['Strand'],
+      }),
+      baseRecord('link-a', 313, {
+        Catalog_ProductType: 'Bracelet',
+        Catalog_BraceletType: ['Link'],
+      }),
+    ];
+    const input = {
+      ...groupsInput,
+      body: {
+        kind: 'product_groups' as const,
+        alternatives: null,
+        groups: [
+          {
+            basis: { attribute: 'Catalog_BraceletType' as const, value: 'Strand' },
+            items: [line('strand-a'), line('strand-b')],
+          },
+          {
+            basis: { attribute: 'Catalog_BraceletType' as const, value: 'Link' },
+            items: [line('link-a')],
+          },
+        ],
+      },
+    };
+    const result = presentChoices(input, context({ evidence: braceletEvidence }));
+    expect(result).toMatchObject({
+      status: 'staged',
+      proposal: {
+        groups: [{ title: 'Bracelet style: Strand' }, { title: 'Bracelet style: Link' }],
+      },
+    });
+    expect(
+      presentChoices(
+        {
+          ...input,
+          body: {
+            ...input.body,
+            groups: [
+              {
+                basis: { attribute: 'Catalog_BraceletType' as const, value: 'Strand' },
+                items: [line('strand-a'), line('link-a')],
+              },
+            ],
+          },
+        },
+        context({ evidence: braceletEvidence }),
+      ),
+    ).toMatchObject({ status: 'invalid_input' });
   });
 
   it('supports up to three complete-look alternatives with three purchasable lines', () => {
@@ -656,5 +752,39 @@ describe('API-only present_choices staging', () => {
     if (result.status !== 'staged') return;
     expect(result.proposal.groups[0].lines[0].lineSubtotalCents).toBeNull();
     expect(result.proposal.assessment.perItem).toBe('unresolved');
+  });
+
+  it('stages a line whose explanation cites sibling-record facts without altering identity fields', () => {
+    // Vienna incident pin (STAGE2-VIENNA-IDENTITY-CAUSAL-EVIDENCE-2026-10-07):
+    // the explanation channel is model-authored and intentionally NOT checked
+    // against the bound record, so prose carrying a sibling record's price,
+    // condition or stock stages successfully while the card's identity fields
+    // stay the staged record's own. This test pins that accepted design
+    // decision: any future prose-vs-record guard is a deliberate contract
+    // change, not a silent behavior shift.
+    const blended = {
+      ...groupsInput,
+      body: {
+        kind: 'product_groups' as const,
+        groups: [
+          {
+            basis: groupBasis(),
+            items: [
+              {
+                ...line('necklace'),
+                explanation: 'A first quality piece at 49.5 dollars, currently out of stock.',
+              },
+            ],
+          },
+        ],
+        alternatives: null,
+      },
+    };
+    const result = presentChoices(blended, context());
+    expect(result.status).toBe('staged');
+    if (result.status !== 'staged') return;
+    const stagedLine = result.proposal.groups[0].lines[0];
+    expect(stagedLine.objectID).toBe('necklace');
+    expect(stagedLine.explanation).toContain('first quality');
   });
 });

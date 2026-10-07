@@ -292,7 +292,10 @@ function Experience() {
             }
           />
         </Routes>
-        {import.meta.env.DEV && <DevInspector state={contextState} />}
+        {import.meta.env.DEV &&
+          new URLSearchParams(window.location.search).get('debug') === '1' && (
+            <DevInspector state={contextState} />
+          )}
       </Shell>
       <Concierge ref={chat} context={getContext} />
     </>
