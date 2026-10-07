@@ -15,7 +15,7 @@ The current snapshot is incomplete. See the [Plan 3.1 handoff](docs/PLAN-3.1-STA
 | `src/ProductWorkspace.tsx` | Discover, Saved, Compare and Combination views with visible product selection, prices and supported details. The tabs share one action-grid treatment. Multi-group Discover shows one lead per validated group and reveals up to two preselected variations on demand. |
 | `tests/` and `evaluation/concierge-phases-1-3/` | Local regressions and a prepared but unaccepted live-journey scaffold. |
 
-The published `Concierge - Development` now serves the protected Vercel snapshot as well as the connected local path. Its tool names are `update_shopping_state`, `retrieve_evidence` and `present_choices`. The older Concierge and Interpreter have been removed after configuration backups and explicit confirmation. No product-index setting or record change is part of this application.
+The published `Concierge - Development` now serves the public Vercel snapshot as well as the connected local path. Its tool names are `update_shopping_state`, `retrieve_evidence` and `present_choices`. The older Concierge and Interpreter have been removed after configuration backups and explicit confirmation. No product-index setting or record change is part of this application.
 
 The application validates `Catalog_BraceletType` as a possible product-group basis. The published Agent Studio tool schema is administered separately and must be read back before claiming that the live agent can emit this newly allowed basis.
 
@@ -48,4 +48,4 @@ For a read-only configuration backup, run `npm run snapshot -- <agent-id>`. The 
 
 ## Deployment
 
-The protected Vercel project has Git-triggered deployment disabled. An authorized snapshot needs a manual Vercel deployment and a valid `JTV_CONCIERGE_PRODUCTION_AGENT_ID` in the Production environment. Verify the served commit, protected access, `/api/health`, a read-only product request and an actual Concierge turn. Follow the [deployment guide](docs/deployment.md). A GitHub push and a Vercel build are separate events.
+The public Vercel project has Git-triggered deployment disabled. An authorized snapshot needs a manual Vercel deployment and a valid `JTV_CONCIERGE_PRODUCTION_AGENT_ID` in the Production environment. Verify the served commit, unauthenticated access, `/api/health`, a read-only product request and an actual Concierge turn. Follow the [deployment guide](docs/deployment.md). A GitHub push and a Vercel build are separate events.
