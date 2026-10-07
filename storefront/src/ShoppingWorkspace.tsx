@@ -7,12 +7,16 @@ export function ShoppingWorkspace({
   onStart,
   model,
   focusProductId,
+  focusProductRequest,
+  onPreviewClose,
 }: {
   onSend?: (message: string) => void;
   onStart?: () => void;
   onReset?: () => void;
   model?: WorkspaceViewModel;
   focusProductId?: string | null;
+  focusProductRequest?: number;
+  onPreviewClose?: () => void;
 }) {
   const s = useShopping();
   if (!s && !model) return null;
@@ -28,6 +32,8 @@ export function ShoppingWorkspace({
         onStart={onStart}
         model={model}
         focusProductId={focusProductId}
+        focusProductRequest={focusProductRequest}
+        onPreviewClose={onPreviewClose}
       />
     </aside>
   );

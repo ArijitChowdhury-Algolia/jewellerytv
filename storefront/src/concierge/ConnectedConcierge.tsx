@@ -211,13 +211,17 @@ export function getConnectedTurnSystemNotice(messages: readonly UIMessage[], fin
 export function ConversationMessage({
   message,
   revealed,
-  onProductLink,
   verifiedBlogUrls,
+  knownProductIds = new Set<string>(),
+  verifiedProductIds = new Set<string>(),
+  onProductLink,
 }: {
   message: UIMessage;
   revealed: boolean;
-  onProductLink?: (id: string, event: MouseEvent<HTMLAnchorElement>) => void;
   verifiedBlogUrls?: ReadonlySet<string>;
+  knownProductIds?: ReadonlySet<string>;
+  verifiedProductIds?: ReadonlySet<string>;
+  onProductLink?: (id: string, event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const text = messageText(message);
   if (!text) return null;
@@ -234,35 +238,24 @@ export function ConversationMessage({
           disableParsingRawHTML: true,
           overrides: {
             a: {
-              component: ({
-                href,
-                children,
-                ...props
-              }: {
-                href?: string;
-                children?: ReactNode;
-                [key: string]: unknown;
-              }) => {
-                const productHref = href?.match(/^\/product\/[^/?#]+$/) ? href : null;
+              component: ({ href, children }: { href?: string; children?: ReactNode }) => {
+                const productId = href?.match(/^\/product\/[^/?#]+$/)
+                  ? parseVerifiedProductLink(href, knownProductIds, verifiedProductIds)
+                  : null;
+                const productHref = productId ? href : null;
                 const articleHref = verifiedBlogHref(href, verifiedBlogUrls ?? new Set());
                 const safeHref = productHref ?? articleHref;
                 if (!safeHref) return <span>{children}</span>;
                 return (
                   <a
-                    {...props}
                     href={safeHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(event) => {
-                      const match = productHref?.match(/^\/product\/([^/?#]+)$/);
-                      if (match && onProductLink) {
-                        try {
-                          onProductLink(decodeURIComponent(match[1]), event);
-                        } catch {
-                          /* retain normal PDP navigation */
-                        }
-                      }
-                    }}
+                    target={productHref ? undefined : '_blank'}
+                    rel={productHref ? undefined : 'noopener noreferrer'}
+                    onClick={
+                      productId && onProductLink
+                        ? (event) => onProductLink(productId, event)
+                        : undefined
+                    }
                   >
                     {children}
                   </a>
@@ -304,6 +297,7 @@ export function ConnectedConcierge({
   const [systemNotices, setSystemNotices] = useState<string[]>([]);
   const [section, setSection] = useState<'conversation' | 'products'>('conversation');
   const [focusProductId, setFocusProductId] = useState<string | null>(null);
+  const [focusProductRequest, setFocusProductRequest] = useState(0);
   const [briefControls, setBriefControls] = useState<HTMLDivElement | null>(null);
   const session = useMemo(
     () =>
@@ -352,24 +346,36 @@ export function ConnectedConcierge({
         event.altKey
       )
         return;
-      const knownIds = new Set([
+      event.preventDefault();
+      const knownProductIds = new Set([
         ...model.products.map((item) => item.product.id),
+        ...model.selectionRecords.map((item) => item.id),
         ...model.discoveries.flatMap((group) => group.items.map((item) => item.product.id)),
       ]);
       if (
         !parseVerifiedProductLink(
           `/product/${encodeURIComponent(id)}`,
-          knownIds,
+          knownProductIds,
           verifiedProductIds,
         )
       )
         return;
-      event.preventDefault();
-      model.setView(model.products.some((item) => item.product.id === id) ? 'saved' : 'discover');
+      model.setView('discover');
       setFocusProductId(id);
+      setFocusProductRequest((request) => request + 1);
       setSection('products');
+      void model.refreshProducts([id]);
     },
     [model, verifiedProductIds],
+  );
+  const knownProductIds = useMemo(
+    () =>
+      new Set([
+        ...model.products.map((item) => item.product.id),
+        ...model.selectionRecords.map((item) => item.id),
+        ...model.discoveries.flatMap((group) => group.items.map((item) => item.product.id)),
+      ]),
+    [model.products, model.selectionRecords, model.discoveries],
   );
   const applyBrief = useCallback(
     async (operation: Parameters<typeof applyBriefOperationsV3>[1]['operations'][number]) => {
@@ -658,8 +664,10 @@ export function ConnectedConcierge({
               key={message.id}
               message={message}
               revealed={revealed.has(message.id)}
-              onProductLink={handleProductLink}
+              knownProductIds={knownProductIds}
+              verifiedProductIds={verifiedProductIds}
               verifiedBlogUrls={verifiedBlogUrls}
+              onProductLink={handleProductLink}
             />
           ))}
           {systemNotices.map((notice) => (
@@ -706,6 +714,8 @@ export function ConnectedConcierge({
         <ShoppingWorkspace
           model={model}
           focusProductId={focusProductId}
+          focusProductRequest={focusProductRequest}
+          onPreviewClose={() => setFocusProductId(null)}
           onStart={() => {
             setSection('conversation');
             requestAnimationFrame(() =>

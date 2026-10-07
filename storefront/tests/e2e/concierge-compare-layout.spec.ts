@@ -7,14 +7,22 @@ const records = [
   {
     objectID: 'CHAIN-A',
     Catalog_TitleDescription: '14k White Gold 0.8mm Polished Baby Rope Chain, 24 inches',
+    Catalog_ProductType: 'Necklace',
+    Catalog_Brand: 'JTV Collection',
+    Catalog_JewelryMaterialNavigationName: ['Gold'],
+    Catalog_JewelryMaterialNavigationPurity: ['14K'],
+    Catalog_JewelryMaterialNavigationColor: ['White'],
     Pricing_ActivePrice: 350.38,
-    Catalog_Material: '14K White Gold',
     Media_Images: ['https://fixture.test/compare-image/landscape.svg'],
   },
   {
     objectID: 'CHAIN-B',
     Catalog_TitleDescription:
       '14k White Gold 0.95mm Solid Diamond-Cut Cable Chain Necklace, Twenty Inches',
+    Catalog_ProductType: 'Necklace',
+    Catalog_JewelryMaterialNavigationName: ['Gold'],
+    Catalog_JewelryMaterialNavigationPurity: ['14K'],
+    Catalog_JewelryMaterialNavigationColor: ['White'],
     Pricing_ActivePrice: 473.53,
     Media_Images: ['https://fixture.test/compare-image/portrait.svg'],
   },
@@ -45,7 +53,7 @@ const session = {
 test('Compare aligns unequal product titles and facts at responsive widths', async ({
   browser,
 }, testInfo) => {
-  for (const width of [375, 768, 1024, 1280]) {
+  for (const width of [375, 768, 1024, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage();
     await page.addInitScript(
@@ -154,9 +162,39 @@ test('Compare aligns unequal product titles and facts at responsive widths', asy
       aligned(geometry[0].actions?.y, geometry[1].actions?.y);
       expect(geometry[0].attributes).toHaveLength(5);
       expect(geometry[1].attributes).toHaveLength(5);
-      for (let row = 0; row < 5; row += 1) {
+      for (let row = 0; row < geometry[0].attributes.length; row += 1) {
         aligned(geometry[0].attributes[row].y, geometry[1].attributes[row].y);
       }
+      const facts = await comparison
+        .locator('.pw-compare-product')
+        .first()
+        .locator('.pw-compare-attributes > div')
+        .evaluateAll((rows) =>
+          rows.map((row) => ({
+            label: row.querySelector('dt')?.textContent?.trim(),
+            value: row.querySelector('dd')?.textContent?.trim(),
+          })),
+        );
+      expect(facts.map((fact) => fact.label)).toEqual([
+        'Brand',
+        'Product type',
+        'Material',
+        'Material purity',
+        'Material color',
+      ]);
+      expect(facts.find((fact) => fact.label === 'Brand')?.value).toBe('JTV Collection');
+      const secondFacts = await comparison
+        .locator('.pw-compare-product')
+        .nth(1)
+        .locator('.pw-compare-attributes > div')
+        .evaluateAll((rows) =>
+          rows.map((row) => ({
+            label: row.querySelector('dt')?.textContent?.trim(),
+            value: row.querySelector('dd')?.textContent?.trim(),
+          })),
+        );
+      expect(secondFacts.find((fact) => fact.label === 'Brand')?.value).toBe('Not recorded');
+      expect(facts.some((fact) => fact.label?.startsWith('Gemstone'))).toBe(false);
       await testInfo.attach(`compare-${width}px.json`, {
         body: Buffer.from(JSON.stringify({ width, geometry }, null, 2)),
         contentType: 'application/json',
@@ -172,7 +210,7 @@ test('Compare aligns unequal product titles and facts at responsive widths', asy
         expect(documentOverflow).toBeLessThanOrEqual(1);
       }
 
-      await expect(comparison.getByText('Not recorded').first()).toBeVisible();
+      await expect(comparison.getByText('Not recorded', { exact: true })).toBeVisible();
       await expect(comparison.getByRole('button', { name: /remove from comparison/i })).toHaveCount(
         2,
       );
