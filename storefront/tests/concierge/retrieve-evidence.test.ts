@@ -976,6 +976,50 @@ describe('retrieve_evidence', () => {
     });
     expect((await missing(productInput())).status).toBe('incomplete_evidence');
   });
+  it('compiles an exclusion-field material colour exclusion and excludes matching records', async () => {
+    const exclusionFact = {
+      field: 'exclusion',
+      scope: { kind: 'mission', key: null },
+      value: {
+        kind: 'facet',
+        attribute: 'Catalog_MaterialInformation.MaterialColor',
+        values: ['Yellow'],
+        operator: 'none',
+      },
+    };
+    const retrieve = createEvidenceRetriever({
+      search: async () => [
+        {
+          objectID: 'two-tone',
+          Catalog_MaterialInformation: [
+            { MaterialType: 'Silver', MaterialColor: 'White', MaterialPurity: 'Sterling' },
+            { MaterialType: 'Gold', MaterialColor: 'Yellow', MaterialPurity: '14K' },
+          ],
+        },
+        {
+          objectID: 'clean',
+          Catalog_MaterialInformation: [
+            { MaterialType: 'Gold', MaterialColor: 'White', MaterialPurity: '14K' },
+          ],
+        },
+        {
+          objectID: 'no-material',
+          Catalog_ProductType: 'Necklace',
+        },
+      ],
+      currentState: async () => state([ring, exclusionFact]),
+    });
+    const response = await retrieve(productInput());
+    expect(response.status).toBe('ok');
+    expect(response.records.map((record) => record.objectID)).toEqual(['clean']);
+    const noColour = createEvidenceRetriever({
+      search: async () => [
+        { objectID: 'missing-colour', Catalog_MaterialInformation: [{ MaterialType: 'Gold' }] },
+      ],
+      currentState: async () => state([ring, exclusionFact]),
+    });
+    expect((await noColour(productInput())).status).toBe('incomplete_evidence');
+  });
   it('verifies typed material alternatives as complete same-object branches', async () => {
     const alternatives = {
       field: 'material',

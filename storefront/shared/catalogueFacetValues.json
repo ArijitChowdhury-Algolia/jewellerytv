@@ -3,7 +3,7 @@
     "retrievedAt": "2026-10-02T22:29:49.943849+00:00",
     "method": "Read-only search, empty query, hitsPerPage=0, maxValuesPerFacet=1000; keys only, no counts or records",
     "exhaustiveFacetsCount": false,
-    "note": "Observed values only; unseen or newly added values remain context until refreshed."
+    "note": "Observed values only; unseen or newly added values remain context until refreshed. Catalog_MaterialInformation.MaterialColor is a nested, non-faceted attribute: its listed values reuse the read-only navigation colour vocabulary; colours observed in retrieved records so far (White, Yellow, Blue) are a subset, and unseen values stay context until refreshed."
   },
   "values": {
     "Catalog_ProductType": [
@@ -347,6 +347,24 @@
       "Sterling"
     ],
     "Catalog_JewelryMaterialNavigationColor": [
+      "Black",
+      "Blue",
+      "Brown",
+      "Gray",
+      "Green",
+      "Multi-color",
+      "No Color",
+      "Orange",
+      "Pink",
+      "Purple",
+      "Red",
+      "Rose",
+      "Tri-color",
+      "Two-tone",
+      "White",
+      "Yellow"
+    ],
+    "Catalog_MaterialInformation.MaterialColor": [
       "Black",
       "Blue",
       "Brown",
