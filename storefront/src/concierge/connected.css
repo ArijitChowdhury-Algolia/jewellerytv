@@ -114,17 +114,26 @@
   overflow: auto;
   padding: 22px 20px;
 }
+.concierge-workspace.connected-concierge
+  .conversation-column
+  > .concierge-messages:has(.connected-welcome) {
+  display: flex;
+  flex-direction: column;
+}
 .connected-welcome {
-  padding: 18px 0;
+  width: 100%;
+  margin: auto 0;
+  padding: 24px 12px;
+  text-align: center;
 }
 .connected-welcome h2 {
-  margin-bottom: 10px;
-  font-size: 22px;
-  font-weight: 400;
-}
-.connected-welcome p {
-  max-width: 35ch;
-  line-height: 1.55;
+  max-width: 21ch;
+  margin: 0 auto;
+  font-size: clamp(29px, 3.2vw, 43px);
+  line-height: 1.16;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  text-wrap: balance;
 }
 .connected-message {
   max-width: 92%;
@@ -135,13 +144,13 @@
 }
 .connected-user-message {
   margin-left: auto;
-  margin-right: 12px;
+  margin-right: 0;
   background: #edf6fa;
   color: #173e4b;
 }
 .connected-assistant-message {
-  margin: 16px 12px 28px 0;
-  max-width: min(100% - 12px, 62ch);
+  margin: 16px 0 28px;
+  max-width: min(100%, 62ch);
   padding: 0 16px;
   border: 0;
   border-left: 2px solid #b8d0db;
@@ -179,6 +188,19 @@
 }
 .connected-markdown strong {
   font-weight: 500;
+}
+.connected-markdown a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.connected-markdown a:hover {
+  text-decoration-thickness: 2px;
+}
+.connected-markdown a:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
 }
 .connected-markdown > :last-child {
   margin-bottom: 0;
@@ -223,7 +245,10 @@
 .connected-prompt input {
   min-width: 0;
   flex: 1;
-  border: 1px solid #9caeb5;
+  border: 0;
+  border-top: 1px solid #9caeb5;
+  border-bottom: 1px solid #9caeb5;
+  border-radius: 0;
   padding: 10px 12px;
   min-height: 44px;
 }

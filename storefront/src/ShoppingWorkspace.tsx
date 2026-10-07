@@ -4,10 +4,12 @@ import './shopping-workspace.css';
 /** Product work lives here; the editable brief stays alongside the conversation. */
 export function ShoppingWorkspace({
   onSend,
+  onStart,
   model,
   focusProductId,
 }: {
   onSend?: (message: string) => void;
+  onStart?: () => void;
   onReset?: () => void;
   model?: WorkspaceViewModel;
   focusProductId?: string | null;
@@ -21,7 +23,12 @@ export function ShoppingWorkspace({
           {s.error}
         </p>
       )}
-      <ProductWorkspace onAsk={onSend} model={model} focusProductId={focusProductId} />
+      <ProductWorkspace
+        onAsk={onSend}
+        onStart={onStart}
+        model={model}
+        focusProductId={focusProductId}
+      />
     </aside>
   );
 }

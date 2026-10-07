@@ -19,7 +19,7 @@ export const METAL_WATCH_BAND_MATERIALS = [
 ] as const;
 export const MATERIAL_ALTERNATIVE_TYPES = ['Gold', 'Silver'] as const;
 export const MATERIAL_ALTERNATIVE_COLORS = ['White'] as const;
-export const MATERIAL_ALTERNATIVE_PURITIES = ['Sterling'] as const;
+export const MATERIAL_ALTERNATIVE_PURITIES = ['Sterling', '10K', '14K', '18K', '24K'] as const;
 export const PRODUCT_TYPES = [
   'Ring',
   'Earrings',

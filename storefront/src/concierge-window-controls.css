@@ -51,24 +51,13 @@
 }
 
 .concierge-window-resize {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  z-index: 3;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
   cursor: nwse-resize;
   touch-action: none;
 }
 
 .concierge-window-resize:focus-visible {
-  outline: 3px solid #0076a9;
-  outline-offset: -4px;
+  outline: 2px solid #fff;
+  outline-offset: -3px;
 }
 
 .concierge-workspace.concierge-panel.concierge-workspace--maximized {

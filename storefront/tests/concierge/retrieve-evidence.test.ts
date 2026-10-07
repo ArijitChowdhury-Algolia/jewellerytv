@@ -537,9 +537,11 @@ describe('retrieve_evidence', () => {
     );
   });
   it('treats an accepted product reference as selection state, not a search constraint', async () => {
-    const search = vi.fn().mockResolvedValue([
-      { objectID: 'DOQ140', Catalog_ProductType: 'Necklace', Pricing_ActivePrice: 179.99 },
-    ]);
+    const search = vi
+      .fn()
+      .mockResolvedValue([
+        { objectID: 'DOQ140', Catalog_ProductType: 'Necklace', Pricing_ActivePrice: 179.99 },
+      ]);
     const retrieve = createEvidenceRetriever({
       search,
       currentState: async () =>
@@ -1014,4 +1016,77 @@ describe('retrieve_evidence', () => {
     expect(response.records.map((record) => record.objectID)).toEqual(['silver']);
     expect(response.unresolved).toHaveLength(2);
   });
+  it.each(['10K', '14K', '18K', '24K'] as const)(
+    'matches explicit %s white gold only when type, color and purity share one material entry',
+    async (purity) => {
+      const necklace = {
+        field: 'product_type',
+        scope: { kind: 'mission', key: null },
+        value: {
+          kind: 'facet',
+          attribute: 'Catalog_ProductType',
+          values: ['Necklace'],
+          operator: 'any',
+        },
+      };
+      const material = {
+        field: 'material',
+        scope: { kind: 'mission', key: null },
+        value: {
+          kind: 'material_alternatives',
+          alternatives: [{ type: 'Gold', color: 'White', purity, plating: null }],
+        },
+      };
+      const search = vi.fn().mockResolvedValue([
+        {
+          objectID: 'exact',
+          Catalog_ProductType: 'Necklace',
+          Catalog_MaterialInformation: [
+            { MaterialType: 'Gold', MaterialColor: 'White', MaterialPurity: purity },
+          ],
+        },
+        {
+          objectID: 'mixed-components',
+          Catalog_ProductType: 'Necklace',
+          Catalog_MaterialInformation: [
+            { MaterialType: 'Gold', MaterialColor: 'Yellow', MaterialPurity: purity },
+            {
+              MaterialType: 'Gold',
+              MaterialColor: 'White',
+              MaterialPurity: purity === '18K' ? '14K' : '18K',
+            },
+          ],
+        },
+      ]);
+      const materialState = state([necklace, material]);
+      const retrieve = createEvidenceRetriever({
+        search,
+        currentState: async () => materialState,
+      });
+      const response = await retrieve(productInput({ target: null }));
+      expect(response.status, JSON.stringify(response.error)).toBe('ok');
+      expect(response.records.map((record) => record.objectID)).toEqual(['exact']);
+      expect(search).toHaveBeenCalledOnce();
+
+      const untypedSearch = vi.fn();
+      const untyped = createEvidenceRetriever({
+        search: untypedSearch,
+        currentState: async () =>
+          state([
+            necklace,
+            { ...material, value: { kind: 'text', text: `${purity.toLowerCase()} white gold` } },
+          ]),
+      });
+      const rejected = await untyped(productInput({ target: null }));
+      expect(rejected.status).toBe('unsupported_constraint');
+      expect(rejected.unresolved).toEqual([
+        {
+          field: 'material',
+          reason:
+            'Material/component correlation is not safely established by independent top-level facets',
+        },
+      ]);
+      expect(untypedSearch).not.toHaveBeenCalled();
+    },
+  );
 });
