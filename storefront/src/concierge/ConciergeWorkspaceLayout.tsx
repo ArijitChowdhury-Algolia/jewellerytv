@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { useConciergeWindowControls } from './useConciergeWindowControls';
+import '../concierge-window-controls.css';
 import '../concierge-workspace.css';
 import '../shopping-workspace.css';
 
@@ -39,14 +42,46 @@ export function ConciergeWorkspaceLayout({
   open = true,
   ariaLabel = 'Jewelry buying Concierge',
 }: ConciergeWorkspaceLayoutProps) {
+  const windowControls = useConciergeWindowControls();
   if (!open) return null;
   return (
-    <aside className="concierge-panel concierge-workspace connected-concierge" aria-label={ariaLabel}>
-      <header className="concierge-header">
+    <aside
+      ref={windowControls.panelRef}
+      style={windowControls.style}
+      className={`concierge-panel concierge-workspace connected-concierge${windowControls.maximized ? ' concierge-workspace--maximized' : ''}`}
+      aria-label={ariaLabel}
+    >
+      <header className="concierge-header" onPointerDown={windowControls.beginHeaderMove}>
+        <button
+          type="button"
+          className="concierge-window-keyboard-move"
+          aria-label="Move Concierge window with arrow keys"
+          aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+          title="Use arrow keys to move the window"
+          onPointerDown={windowControls.beginMove}
+          onKeyDown={windowControls.handleMoveKeyDown}
+        >
+          Move window
+        </button>
         <strong>JTV Concierge</strong>
         <div className="concierge-header-actions">
           {headerActions}
           {preferenceControls && <div className="brief-header-controls">{preferenceControls}</div>}
+          <button
+            type="button"
+            className="concierge-window-maximize"
+            aria-label={
+              windowControls.maximized ? 'Restore Concierge window' : 'Maximize Concierge window'
+            }
+            title={windowControls.maximized ? 'Restore window size' : 'Maximize to browser window'}
+            onClick={windowControls.toggleMaximized}
+          >
+            {windowControls.maximized ? (
+              <Minimize2 size={16} aria-hidden="true" />
+            ) : (
+              <Maximize2 size={16} aria-hidden="true" />
+            )}
+          </button>
         </div>
       </header>
       {sectionSwitch && (
@@ -65,6 +100,15 @@ export function ConciergeWorkspaceLayout({
           {productWorkspace}
         </section>
       </div>
+      <button
+        type="button"
+        className="concierge-window-resize"
+        aria-label="Resize Concierge window with arrow keys"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+        title="Drag to resize or focus and use arrow keys"
+        onPointerDown={windowControls.beginResize}
+        onKeyDown={windowControls.handleResizeKeyDown}
+      />
     </aside>
   );
 }

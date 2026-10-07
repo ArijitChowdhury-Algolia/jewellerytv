@@ -58,4 +58,25 @@ describe('grouped discovery workspace', () => {
     expect(html).toContain('Statement');
     expect(html).toContain('Gift');
   });
+
+  it('keeps the add-to-combination action visible and marks selected pieces', () => {
+    const workspace = model();
+    workspace.combinationIds = ['a'];
+    const html = renderToStaticMarkup(<ProductWorkspace model={workspace} />);
+    expect(html).toContain('In combination ✓');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('Add to combination');
+    expect(html).not.toContain('<summary>More</summary>');
+  });
+
+  it('explains the three-piece limit and disables only new additions when full', () => {
+    const workspace = model();
+    workspace.combinationIds = ['a', 'b', 'c'];
+    const html = renderToStaticMarkup(<ProductWorkspace model={workspace} />);
+    expect(html).toContain('Combination limit reached. Remove one piece before adding another.');
+    expect(html).toContain('id="pw-combination-limit"');
+    expect(html).toContain('aria-describedby="pw-combination-limit"');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Add to combination<\/button>/);
+  });
 });

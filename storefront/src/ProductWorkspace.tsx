@@ -4,6 +4,7 @@ import { type Product } from './catalog';
 import { productURL } from './routing';
 import { pairTotal } from '../shared/shopping';
 import './product-workspace.css';
+import './product-combination-controls.css';
 import { markWorkspace, markWorkspaceImage, type WorkspaceTraceBinding } from './telemetry';
 import { checkBriefConflicts, checkCombinationBudget } from '../shared/briefConstraints';
 export type View = 'discover' | 'compare' | 'saved' | 'combination';
@@ -253,6 +254,8 @@ export function ProductWorkspace({
   }
   function actions(p: Product) {
     const saved = s.products.some((x) => x.product.id === p.id);
+    const inCombination = s.combinationIds.includes(p.id);
+    const combinationFull = s.combinationIds.length >= 3;
     return (
       <div className="pw-actions">
         <button aria-pressed={saved} onClick={() => workspaceSaveAction(s, p)}>
@@ -265,15 +268,15 @@ export function ProductWorkspace({
         >
           {s.compareIds.includes(p.id) ? 'Comparing ✓' : 'Compare'}
         </button>
-        <details className="pw-more">
-          <summary>More</summary>
-          <button
-            disabled={!s.combinationIds.includes(p.id) && s.combinationIds.length >= 3}
-            onClick={() => workspaceCombinationAction(s, p)}
-          >
-            {s.combinationIds.includes(p.id) ? 'Remove from combination' : 'Add to combination'}
-          </button>
-        </details>
+        <button
+          className="pw-combination-toggle"
+          aria-pressed={inCombination}
+          aria-describedby={combinationFull && !inCombination ? 'pw-combination-limit' : undefined}
+          disabled={!inCombination && combinationFull}
+          onClick={() => workspaceCombinationAction(s, p)}
+        >
+          {inCombination ? 'In combination ✓' : 'Add to combination'}
+        </button>
       </div>
     );
   }
@@ -346,6 +349,11 @@ export function ProductWorkspace({
       {s.refreshError && (
         <p className="pw-error" role="alert">
           {s.refreshError}
+        </p>
+      )}
+      {s.combinationIds.length >= 3 && (
+        <p id="pw-combination-limit" className="pw-limit-note" role="status">
+          Combination limit reached. Remove one piece before adding another.
         </p>
       )}
       {activePreview && (
