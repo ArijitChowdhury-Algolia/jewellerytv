@@ -45,6 +45,92 @@ const ring = {
 };
 
 describe('retrieve_evidence', () => {
+  /* Legacy item-scope scenarios: an exact target may have an older differently cased
+   * live or tentative sibling; refuse search before compiling partial hard constraints.
+   * Identical keys and retired siblings do not block read-only retrieval. */
+  it.each(['active', 'tentative'] as const)(
+    'fails closed before search for a legacy %s case-colliding item budget',
+    async (budgetStatus) => {
+      const search = vi.fn().mockResolvedValue([]);
+      const retrieve = createEvidenceRetriever({
+        search,
+        currentState: async () =>
+          state([
+            {
+              field: 'product_type',
+              scope: { kind: 'item', key: 'necklace-vg320p' },
+              value: {
+                kind: 'facet',
+                attribute: 'Catalog_ProductType',
+                values: ['Necklace'],
+                operator: 'any',
+              },
+            },
+            {
+              status: budgetStatus,
+              field: 'budget',
+              scope: { kind: 'item', key: 'necklace-vg320P' },
+              value: {
+                kind: 'money',
+                cents: 50000,
+                currency: 'USD',
+                operator: 'lte',
+                basis: 'per-item',
+              },
+            },
+          ]),
+      });
+      const result = await retrieve(
+        productInput({
+          target: { kind: 'item', itemKey: 'necklace-vg320p', productType: 'Necklace' },
+        }),
+      );
+      expect(result).toMatchObject({
+        status: 'unsupported_constraint',
+        error: { code: 'ITEM_SCOPE_KEY_COLLISION' },
+        records: [],
+      });
+      expect(search).not.toHaveBeenCalled();
+    },
+  );
+  it('does not reserve a retired differently cased item scope', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        state([
+          {
+            field: 'product_type',
+            scope: { kind: 'item', key: 'necklace-vg320p' },
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_ProductType',
+              values: ['Necklace'],
+              operator: 'any',
+            },
+          },
+          {
+            status: 'retracted',
+            field: 'budget',
+            scope: { kind: 'item', key: 'necklace-vg320P' },
+            value: {
+              kind: 'money',
+              cents: 50000,
+              currency: 'USD',
+              operator: 'lte',
+              basis: 'per-item',
+            },
+          },
+        ]),
+    });
+    const result = await retrieve(
+      productInput({
+        target: { kind: 'item', itemKey: 'necklace-vg320p', productType: 'Necklace' },
+      }),
+    );
+    expect(result.status).toBe('zero_hits');
+    expect(search).toHaveBeenCalledTimes(1);
+  });
   it('rejects model supplied constraints and arbitrary sources', async () => {
     const retrieve = createEvidenceRetriever({
       search: vi.fn().mockResolvedValue([]),
@@ -1183,7 +1269,12 @@ describe('retrieve_evidence', () => {
   const itemProductType = (productType: string) => ({
     field: 'product_type',
     scope: { kind: 'item', key: 'VG320P' },
-    value: { kind: 'facet', attribute: 'Catalog_ProductType', values: [productType], operator: 'any' },
+    value: {
+      kind: 'facet',
+      attribute: 'Catalog_ProductType',
+      values: [productType],
+      operator: 'any',
+    },
   });
   const vg320pRecord = {
     objectID: 'VG320P',
@@ -1206,18 +1297,14 @@ describe('retrieve_evidence', () => {
 
   it('fails closed when the record lacks the size field or carries a different size', async () => {
     const missing = createEvidenceRetriever({
-      search: async () => [
-        { objectID: 'VG320P', Catalog_ProductType: 'Necklace' },
-      ],
+      search: async () => [{ objectID: 'VG320P', Catalog_ProductType: 'Necklace' }],
       currentState: async () => state([itemProductType('Necklace'), fitFact()]),
     });
     const missingResponse = await missing(productInput({ target: vg320pTarget }));
     expect(missingResponse.status).toBe('incomplete_evidence');
 
     const wrongSize = createEvidenceRetriever({
-      search: async () => [
-        { ...vg320pRecord, Inventory_AvailableSkuSizeNames: ['20 Inch'] },
-      ],
+      search: async () => [{ ...vg320pRecord, Inventory_AvailableSkuSizeNames: ['20 Inch'] }],
       currentState: async () => state([itemProductType('Necklace'), fitFact()]),
     });
     const wrongResponse = await wrongSize(productInput({ target: vg320pTarget }));
@@ -1232,9 +1319,7 @@ describe('retrieve_evidence', () => {
   it('does not mistake a numeric prefix in another unit for inches', async () => {
     for (const sizeName of ['22 cm', '22K', '22']) {
       const retrieve = createEvidenceRetriever({
-        search: async () => [
-          { ...vg320pRecord, Inventory_AvailableSkuSizeNames: [sizeName] },
-        ],
+        search: async () => [{ ...vg320pRecord, Inventory_AvailableSkuSizeNames: [sizeName] }],
         currentState: async () => state([itemProductType('Necklace'), fitFact()]),
       });
       const response = await retrieve(productInput({ target: vg320pTarget }));
@@ -1289,8 +1374,7 @@ describe('retrieve_evidence', () => {
       const response = await retrieve(productInput({ target: vg320pTarget }));
       expect(response.status, `unit ${unit}`).toBe('unsupported_constraint');
       expect(
-        (
-          response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+        (response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
           entry.reason.toLowerCase().includes(unit === 'unknown' ? 'unknown' : unit),
         ),
         `unit ${unit} reason`,
@@ -1326,13 +1410,15 @@ describe('retrieve_evidence', () => {
     // as a filter.
     const cm = createEvidenceRetriever({
       search: vi.fn().mockResolvedValue([vg320pRecord]),
-      currentState: async () => state([itemProductType('Necklace'), fitFact({ value: 55.88, unit: 'cm' })]),
+      currentState: async () =>
+        state([itemProductType('Necklace'), fitFact({ value: 55.88, unit: 'cm' })]),
     });
     expect((await cm(productInput({ target: vg320pTarget }))).status).toBe('ok');
 
     const mm = createEvidenceRetriever({
       search: vi.fn().mockResolvedValue([vg320pRecord]),
-      currentState: async () => state([itemProductType('Necklace'), fitFact({ value: 558.8, unit: 'mm' })]),
+      currentState: async () =>
+        state([itemProductType('Necklace'), fitFact({ value: 558.8, unit: 'mm' })]),
     });
     expect((await mm(productInput({ target: vg320pTarget }))).status).toBe('ok');
   });

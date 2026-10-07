@@ -472,14 +472,21 @@ export async function updateShoppingState(
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'operation_rejected';
     const unsupported = detail.startsWith('UNSUPPORTED_FACT_ENCODING');
+    const itemScopeCollision = detail === 'ITEM_SCOPE_KEY_COLLISION';
     return {
       state,
       result: await failure(
         input,
         state.brief,
         'invalid_input',
-        unsupported ? 'UNSUPPORTED_FACT_ENCODING' : 'operation_rejected',
-        unsupported ? detail : detail,
+        unsupported
+          ? 'UNSUPPORTED_FACT_ENCODING'
+          : itemScopeCollision
+            ? 'ITEM_SCOPE_KEY_COLLISION'
+            : 'operation_rejected',
+        itemScopeCollision
+          ? 'Item scope key differs only by case from another live item; use its exact key or retract the conflicting scope'
+          : detail,
       ),
     };
   }
