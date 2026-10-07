@@ -46,6 +46,11 @@ test('desktop window moves and resizes by pointer and keyboard, then restores fr
   const panel = await openConcierge(page);
   const initial = await panel.boundingBox();
   expect(initial).not.toBeNull();
+  expect(
+    await panel
+      .locator('.concierge-header')
+      .evaluate((element) => getComputedStyle(element).touchAction),
+  ).toBe('none');
 
   const move = panel.getByRole('button', { name: /move concierge window/i });
   await move.focus();
@@ -109,6 +114,11 @@ test('desktop window moves and resizes by pointer and keyboard, then restores fr
 test('mobile keeps the Concierge full-screen without desktop window controls', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) >= 768, 'Mobile-only responsive behavior');
   const panel = await openConcierge(page);
+  expect(
+    await panel
+      .locator('.concierge-header')
+      .evaluate((element) => getComputedStyle(element).touchAction),
+  ).toBe('auto');
   await expect
     .poll(async () => await panel.boundingBox())
     .toEqual({

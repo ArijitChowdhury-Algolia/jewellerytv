@@ -1,5 +1,6 @@
 .concierge-workspace.concierge-panel .concierge-header {
   border-bottom: 0;
+  touch-action: none;
 }
 
 .concierge-workspace .concierge-header {
@@ -94,9 +95,10 @@
     display: none !important;
   }
 
-  .concierge-workspace .concierge-header,
-  .concierge-workspace .concierge-header:active {
+  .concierge-workspace.concierge-panel .concierge-header,
+  .concierge-workspace.concierge-panel .concierge-header:active {
     cursor: default;
+    touch-action: auto;
   }
 }
 
