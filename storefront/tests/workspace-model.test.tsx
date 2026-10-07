@@ -54,7 +54,7 @@ describe('v3-ready workspace view model', () => {
     expect(html).toContain('Combination (2)');
     expect(html).toContain('Save');
     expect(html).toContain('Compare');
-    expect(html).toContain('Remove from combination');
+    expect(html).toContain('In combination ✓');
     expect(html).toContain('Needs verification');
   });
 
