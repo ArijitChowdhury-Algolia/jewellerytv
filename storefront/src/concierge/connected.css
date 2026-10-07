@@ -240,7 +240,7 @@
 }
 .connected-prompt-row {
   display: flex;
-  gap: 8px;
+  gap: 20px;
 }
 .connected-prompt input {
   min-width: 0;
