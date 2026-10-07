@@ -26,4 +26,4 @@ Historic `BRIEF_V2_ENABLED`, `JTV_BRIEF_AGENT_ID`, `BRIEF_TURN_ROUTING_ENABLED`,
 
 Rollback: restore the prior protected deployment and its environment values. Do not delete the older production Concierge until its consumer and rollback roles are disproven. Deleting it first would make a simple rollback of the prior app impossible. Preserve shopper state and private test evidence; never rewrite Git history as cleanup.
 
-The root README uses a self-contained Mermaid workflow diagram that GitHub renders natively. It has no separate PNG fallback or external font/image asset. Verify the rendered diagram in the pushed GitHub README at normal zoom. The former SVG depicted a two-agent interpreter flow and is removed from active documentation.
+The root README embeds the self-contained [workflow SVG](architecture.svg), with [Mermaid source](architecture.mmd) for edits. The SVG uses system fonts, inline shapes and no external asset, so no PNG fallback is needed. Verify the rendered image in the pushed GitHub README at normal zoom. The former SVG depicted a two-agent interpreter flow and is no longer active.

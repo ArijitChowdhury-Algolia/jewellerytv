@@ -14,19 +14,9 @@ A protected JTV-style storefront for exploring jewelry through conversation. One
 
 ## How it works
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"primaryColor":"#F5F5F7","primaryTextColor":"#000033","primaryBorderColor":"#0067F7","lineColor":"#0067F7","fontFamily":"Sora"}}}%%
-flowchart TB
-  shopper[Shopper] --> ui[JTV chat and product workspace]
-  ui -->|chat| api[Local or Vercel API]
-  api -->|stream| agent[Concierge in Agent Studio]
-  agent -->|tool calls| callbacks[Three browser callbacks]
-  callbacks -->|update| state[Tab shopping state]
-  callbacks -->|retrieve| evidence[Read-only evidence API]
-  evidence --> products[(prod_catalog)]
-  evidence --> guidance[(blog)]
-  callbacks -->|present after completed turn| ui
-```
+![JTV Concierge workflow](storefront/docs/architecture.svg)
+
+The [editable workflow source](storefront/docs/architecture.mmd) records the full state, retrieval and exact-ID refresh paths. The static SVG uses system fonts and self-contained shapes, so GitHub can render it without a separate PNG fallback.
 
 The Concierge owns interpretation, tone, questions, search decisions, curation and explanations. The application owns state, identity, source boundaries, exact arithmetic and display validation. Its three client-side tools are `update_shopping_state`, `retrieve_evidence` and `present_choices`. Product and blog indices and all index settings remain read-only. The app does not contain canned Concierge replies or a second conversational router.
 
