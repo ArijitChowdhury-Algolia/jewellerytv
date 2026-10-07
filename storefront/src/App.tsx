@@ -243,7 +243,9 @@ function Experience() {
     !ready
       ? 'Wait for the current search to finish, or retry the failed search.'
       : '');
-  readiness.current = blocked;
+  // Pending page search already contributes no visible product IDs. It must not
+  // prevent an independent Concierge request from reaching the agent.
+  readiness.current = agentError || contextError;
   demoTrace.contextError = blocked;
   useEffect(() => {
     Object.assign(window, { __JTV_DEMO_TRACE__: demoTrace });
