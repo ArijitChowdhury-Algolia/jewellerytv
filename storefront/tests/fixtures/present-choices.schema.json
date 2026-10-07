@@ -32,10 +32,7 @@
       "properties": {
         "kind": {
           "type": "string",
-          "enum": [
-            "product_groups",
-            "complete_looks"
-          ]
+          "enum": ["product_groups", "complete_looks"]
         },
         "groups": {
           "anyOf": [
@@ -109,6 +106,7 @@
                           "Catalog_ProductType",
                           "Catalog_RingType",
                           "Catalog_EarringType",
+                          "Catalog_BraceletType",
                           "Catalog_NecklaceType",
                           "Catalog_GemstoneInformation.GemstoneColorGroup"
                         ]
@@ -119,17 +117,11 @@
                         "maxLength": 160
                       }
                     },
-                    "required": [
-                      "attribute",
-                      "value"
-                    ],
+                    "required": ["attribute", "value"],
                     "additionalProperties": false
                   }
                 },
-                "required": [
-                  "basis",
-                  "items"
-                ]
+                "required": ["basis", "items"]
               }
             },
             {
@@ -202,10 +194,7 @@
                     }
                   }
                 },
-                "required": [
-                  "title",
-                  "lines"
-                ]
+                "required": ["title", "lines"]
               }
             },
             {
@@ -214,11 +203,7 @@
           ]
         }
       },
-      "required": [
-        "kind",
-        "groups",
-        "alternatives"
-      ]
+      "required": ["kind", "groups", "alternatives"]
     }
   },
   "required": [

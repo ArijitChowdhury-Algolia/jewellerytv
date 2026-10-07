@@ -168,6 +168,28 @@ describe('protected local API', () => {
       '/agent-studio/1/agents/development-agent/completions?stream=true&compatibilityMode=ai-sdk-5',
     );
   });
+  it('ends a broken chat stream with a generic error event instead of leaving partial text open', async () => {
+    const { request, upstream } = await setup();
+    upstream.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: {"type":"start"}\n\n'));
+            setTimeout(() => controller.error(new Error('private upstream detail')), 10);
+          },
+        }),
+        { headers: { 'content-type': 'text/event-stream' } },
+      ),
+    );
+    const response = await request('/api/chat', {
+      id: 'conversation-broken',
+      messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }],
+    });
+    const text = await response.text();
+    expect(text).toContain('"type":"error"');
+    expect(text).toContain('[DONE]');
+    expect(text).not.toContain('private upstream detail');
+  });
   it('rejects foreign Hosts, path traversal and control characters without calling upstream', async () => {
     const { request, upstream, url } = await setup();
     const status = await new Promise<number | undefined>((resolve) => {

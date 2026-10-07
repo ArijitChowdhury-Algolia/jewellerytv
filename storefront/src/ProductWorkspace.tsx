@@ -169,6 +169,10 @@ export function ProductWorkspace({
   const raw = model ?? legacy;
   const supplied = !!model;
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [expandedStyles, setExpandedStyles] = useState<{ signature: string; keys: string[] }>({
+    signature: '',
+    keys: [],
+  });
   useEffect(() => {
     if (!previewId || !raw) return;
     const exists =
@@ -366,6 +370,11 @@ export function ProductWorkspace({
     ...group,
     items: [...new Map(group.items.map((item) => [item.product.id, item] as const)).values()],
   }));
+  const styleSignature = groupedDiscoveries
+    .map((group) => `${group.title}:${group.items.map((item) => item.product.id).join(',')}`)
+    .join('|');
+  const openStyleKeys = expandedStyles.signature === styleSignature ? expandedStyles.keys : [];
+  const showStyleLeads = groupedDiscoveries.length > 1;
   return (
     <section className="product-workspace" aria-label="Shopping choices">
       <nav className="pw-views" aria-label="Product views">
@@ -440,20 +449,57 @@ export function ProductWorkspace({
             <DiscoverWelcome onStart={onStart} />
           ) : (
             <div className="pw-discovery-groups" data-group-count={groupedDiscoveries.length}>
-              {groupedDiscoveries.map((group, index) => (
-                <section
-                  className="pw-discovery-group"
-                  key={`${group.title}-${index}`}
-                  aria-labelledby={`pw-group-${index}`}
-                >
-                  <h3 id={`pw-group-${index}`}>{group.title}</h3>
-                  <div className="pw-group-items">
-                    {group.items.map(({ product, why, assessment: retrievalStatus }) =>
-                      tile(product, why, undefined, retrievalStatus),
-                    )}
-                  </div>
-                </section>
-              ))}
+              {groupedDiscoveries.map((group, index) => {
+                const styleKey = `${group.title}:${group.items.map((item) => item.product.id).join(',')}`;
+                const variations = showStyleLeads ? group.items.slice(1) : [];
+                const expanded = openStyleKeys.includes(styleKey);
+                return (
+                  <section
+                    className="pw-discovery-group"
+                    key={styleKey}
+                    aria-labelledby={`pw-group-${index}`}
+                  >
+                    <h3 id={`pw-group-${index}`}>{group.title}</h3>
+                    <div className="pw-group-items">
+                      {(showStyleLeads ? group.items.slice(0, 1) : group.items).map(
+                        ({ product, why, assessment: retrievalStatus }) =>
+                          tile(product, why, undefined, retrievalStatus),
+                      )}
+                      {variations.length > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            className="pw-style-toggle"
+                            aria-expanded={expanded}
+                            aria-controls={`pw-style-variations-${index}`}
+                            onClick={() =>
+                              setExpandedStyles({
+                                signature: styleSignature,
+                                keys: expanded
+                                  ? openStyleKeys.filter((key) => key !== styleKey)
+                                  : [...openStyleKeys, styleKey],
+                              })
+                            }
+                          >
+                            {expanded
+                              ? 'Show fewer in this style'
+                              : `See ${variations.length} more in this style`}
+                          </button>
+                          <div
+                            className="pw-style-variations"
+                            id={`pw-style-variations-${index}`}
+                            hidden={!expanded}
+                          >
+                            {variations.map(({ product, why, assessment: retrievalStatus }) =>
+                              tile(product, why, undefined, retrievalStatus),
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>

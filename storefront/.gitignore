@@ -4,6 +4,7 @@ dist/
 .env*
 playwright-report/
 test-results/
+docs/workspace/stage6-looks/screenshots/
 evidence/live-agent*.json
 evidence/agent-*.json
 

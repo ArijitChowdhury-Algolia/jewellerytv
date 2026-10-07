@@ -107,21 +107,54 @@ test('single discovery card stays compact and multi-card shelves remain balanced
               '14k white-gold wheat chain with a long descriptive product title that needs wrapping',
             Media_Images: ['https://fixture.test/product-images/landscape.svg'],
           }),
+          ...Array.from({ length: 6 }, (_, index) =>
+            normalizeProduct({
+              ...source,
+              objectID: `VG320P-${index + 4}`,
+              Catalog_TitleDescription: `Catalogue-backed variation ${index + 4} with a distinct chain finish and length`,
+              Media_Images: ['https://fixture.test/product-images/landscape.svg'],
+            }),
+          ),
         ];
         const noop = () => undefined;
         const model = (count: number, groupCount: number) => {
-          const items = products.slice(0, count).map((product) => ({ product }));
+          const items = products.slice(0, count).map((product, index) => ({
+            product,
+            why:
+              count === 3
+                ? [
+                    'A close variation with a longer explanation that wraps across several lines and makes the first card taller.',
+                    'A shorter explanation.',
+                    'Another variation with a medium-length explanation for the third card.',
+                  ][index]
+                : undefined,
+          }));
           const discoveries =
             groupCount === 1
               ? [{ title: 'Exact catalogue choice', items }]
-              : items.map((item, index) => ({ title: `Choice ${index + 1}`, items: [item] }));
+              : groupCount === 2
+                ? [
+                    { title: 'Bracelet style: Strand', items: items.slice(0, 2) },
+                    { title: 'Bracelet style: Link', items: items.slice(2) },
+                  ]
+                : count === 9
+                  ? Array.from({ length: 3 }, (_, index) => ({
+                      title: `Necklace style: Direction ${index + 1}`,
+                      items: items.slice(index * 3, index * 3 + 3),
+                    }))
+                  : items.map((item, index) => ({ title: `Choice ${index + 1}`, items: [item] }));
           return {
-            products: [],
+            products:
+              count === 3
+                ? products
+                    .slice(1)
+                    .map((product) => ({ product, quantity: 1, observedAt: 'fixture' }))
+                : [],
             selectionRecords: products.slice(0, count),
             discoveries,
             activeView: 'discover' as const,
             setView: noop,
-            compareIds: [],
+            compareIds: count === 3 ? [products[1].id] : [],
             combinationIds: [],
             combinationQuantities: {},
             toggleCompare: noop,
@@ -147,6 +180,8 @@ test('single discovery card stays compact and multi-card shelves remain balanced
         { key: 'single', count: 1, groups: 1 },
         { key: 'three-card-gallery', count: 3, groups: 1 },
         { key: 'three-direction-shelves', count: 3, groups: 3 },
+        { key: 'two-actual-styles', count: 3, groups: 2 },
+        { key: 'three-style-families', count: 9, groups: 3 },
       ]) {
         await page.evaluate(
           ({ count, groups }) => {
@@ -156,8 +191,35 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           },
           { count: scenario.count, groups: scenario.groups },
         );
-        const cards = page.locator('.pw-discover .pw-product');
-        await expect(cards).toHaveCount(scenario.count);
+        const cards = page.locator('.pw-discover .pw-product:visible');
+        await expect(cards).toHaveCount(
+          scenario.count === 9 ? 3 : scenario.groups === 2 ? 2 : scenario.count,
+        );
+        if (scenario.groups === 2) {
+          const more = page.getByRole('button', { name: 'See 1 more in this style' });
+          await expect(more).toHaveCount(1);
+          await expect(page.locator('.pw-discovery-group')).toHaveCount(2);
+          await more.click();
+          await expect(cards).toHaveCount(3);
+        }
+        if (scenario.count === 9) {
+          const more = page.getByRole('button', { name: /See 2 more in this style/ });
+          await expect(more).toHaveCount(3);
+          await page.screenshot({
+            path: path.join(runDir, `${viewport.width}-three-style-families-collapsed.png`),
+            fullPage: true,
+          });
+          for (const visibleCount of [5, 7, 9]) {
+            await more.first().click();
+            await expect(cards).toHaveCount(visibleCount);
+          }
+          await expect(page.locator('.pw-discovery-groups .pw-product')).toHaveCount(9);
+          expect(
+            await cards.evaluateAll(
+              (nodes) => new Set(nodes.map((node) => node.getAttribute('data-product-id'))).size,
+            ),
+          ).toBe(9);
+        }
         await expect
           .poll(() =>
             page
@@ -197,6 +259,16 @@ test('single discovery card stays compact and multi-card shelves remain balanced
             documentWidth: document.documentElement.scrollWidth,
             apiCalls: [],
             cards: cardNodes.map(rect),
+            actions: cardNodes.map((card) => {
+              const row = card.querySelector('.pw-actions');
+              return {
+                row: rect(row),
+                buttons: [...(row?.querySelectorAll('button') ?? [])].map((button) => ({
+                  text: button.textContent?.trim(),
+                  bounds: rect(button),
+                })),
+              };
+            }),
             image: rect(image),
             imageNaturalWidth: (image?.querySelector('img') as HTMLImageElement | null)
               ?.naturalWidth,
@@ -230,6 +302,19 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           `${scenario.key} should not overflow at ${viewport.width}px`,
         ).toBeLessThanOrEqual(viewport.width);
         expect(apiCalls, 'fixture replay must not make chat or product API calls').toEqual([]);
+        for (const [index, action] of metrics.actions.entries()) {
+          const card = metrics.cards[index];
+          for (const button of action.buttons) {
+            expect(
+              button.bounds?.x,
+              `${scenario.key}: ${button.text} stays inside its card`,
+            ).toBeGreaterThanOrEqual((card?.x ?? 0) - 1);
+            expect(
+              button.bounds?.right,
+              `${scenario.key}: ${button.text} stays inside its card`,
+            ).toBeLessThanOrEqual((card?.right ?? 0) + 1);
+          }
+        }
         if (scenario.key === 'single') {
           expect(metrics.image?.height).toBeLessThanOrEqual(360);
           expect(metrics.cards[0]?.height).toBeLessThanOrEqual(700);
@@ -249,6 +334,8 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           if (viewport.width === 375) expect(metrics.image?.height).toBeLessThanOrEqual(260);
         }
         if (scenario.key === 'three-card-gallery' && viewport.width >= 768) {
+          const actionBottoms = metrics.actions.map((action) => action.row?.bottom ?? 0);
+          expect(Math.max(...actionBottoms) - Math.min(...actionBottoms)).toBeLessThanOrEqual(2);
           const cardWidths = metrics.cards.map((card) => card?.width ?? 0);
           expect(Math.max(...cardWidths) - Math.min(...cardWidths)).toBeLessThanOrEqual(2);
           expect(new Set(metrics.cards.map((card) => Math.round(card?.x ?? 0))).size).toBe(3);
@@ -260,7 +347,15 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           expect(metrics.productImages.every((image) => image?.objectFit === 'contain')).toBe(true);
         }
         if (scenario.key === 'three-direction-shelves') {
-          expect(metrics.directionImageWidths).toEqual([96, 96, 96]);
+          expect(metrics.directionImageWidths).toHaveLength(3);
+          expect(
+            metrics.directionImageWidths.every(
+              (width, index) => (width ?? Infinity) <= (metrics.cards[index]?.width ?? 0),
+            ),
+          ).toBe(true);
+          expect(metrics.productImages.every((image) => (image?.height ?? Infinity) <= 185)).toBe(
+            true,
+          );
         }
       }
       await context.close();
