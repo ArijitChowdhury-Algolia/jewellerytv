@@ -61,6 +61,13 @@ const PRODUCT_PROJECTION = [
   'Catalog_WatchCaseSize',
   'Catalog_WatchCaseShape',
   'Catalog_WatchStyle',
+  // Watch evidence projection repair (STAGE2-WATER-RESISTANCE-PROJECTION-DESIGN,
+  // red test first): the exact catalogue records carry both fields (measured on
+  // 1W9E1B and 1DXZHA); the projection previously discarded them, so the agent
+  // could not ground a stated water-resistance rating or a previously-owned
+  // check. Query-level attributesToRetrieve only; no index setting changes.
+  'Catalog_WaterResistanceRating',
+  'Catalog_PreviouslyOwned',
   'Catalog_EarringType',
   'Catalog_NecklaceType',
   'Catalog_PendantType',
@@ -218,10 +225,12 @@ function compile(
   filters: EffectiveFilter[];
   unresolved: Array<{ field: string; reason: string }>;
   material: MaterialRequirement[];
+  fit: Array<{ field: 'fit'; expectedInches: number; factId: string }>;
 } {
   const filters: EffectiveFilter[] = [];
   const unresolved: Array<{ field: string; reason: string }> = [];
   const material: MaterialRequirement[] = [];
+  const fit: Array<{ field: 'fit'; expectedInches: number; factId: string }> = [];
   const missionTypes = missionProductTypes(state);
   const isWatch =
     (target?.productType ?? (missionTypes.length === 1 ? missionTypes[0] : '')) === 'Wrist Watch';
@@ -336,6 +345,17 @@ function compile(
         f.value.kind === 'facet' &&
         MATERIAL_ATTRIBUTE_PATHS.has(f.value.attribute))
     ) {
+      // Defense in depth: an exclusion fact with any non-none operator must
+      // never silently compile as an inclusion. The writer gate already
+      // rejects it; the compiler rejects it independently (independent review
+      // of the C4 repair, finding d).
+      if (f.field === 'exclusion' && f.value.kind === 'facet' && f.value.operator !== 'none') {
+        unresolved.push({
+          field: f.field,
+          reason: 'Exclusion facts on material attributes require operator none',
+        });
+        continue;
+      }
       if (f.value.kind === 'facet' && MATERIAL_ATTRIBUTE_PATHS.has(f.value.attribute)) {
         material.push({
           attribute: f.value.attribute.split('.').at(-1) as
@@ -350,6 +370,49 @@ function compile(
           reason:
             'Material/component correlation is not safely established by independent top-level facets',
         });
+      continue;
+    }
+    // Fit measurement branch (STAGE3-FIT-COMPILER-REPAIR-PLAN-2026-10-07,
+    // red tests first). A typed measurement fit compiles as a POST-search
+    // verification against the returned record's own
+    // Inventory_AvailableSkuSizeNames vocabulary, never as an Algolia filter
+    // and never by inventing a size string. Supported: in directly, cm and mm
+    // by the recorded rule 1 in = 2.54 cm exactly; ring_us, ring_uk and
+    // unknown stay out of scope; the mapping is configured for Necklace only
+    // (src/catalog/facets.ts labels Inventory_AvailableSkuSizeNames as
+    // Necklace Length); a mission-scoped fit without an item target stays
+    // unresolved.
+    if (f.field === 'fit' && f.value.kind === 'measurement') {
+      const measurement = f.value;
+      if (measurement.unit !== 'in' && measurement.unit !== 'cm' && measurement.unit !== 'mm') {
+        unresolved.push({
+          field: f.field,
+          reason: `Fit unit '${measurement.unit}' is not supported by the size mapping`,
+        });
+        continue;
+      }
+      if (!target) {
+        unresolved.push({
+          field: f.field,
+          reason:
+            'Fit requires an explicit item target; mission-scoped fit stays unresolved until the exact item is named',
+        });
+        continue;
+      }
+      if (target.productType !== 'Necklace') {
+        unresolved.push({
+          field: f.field,
+          reason: `Fit mapping is not configured for product type '${target.productType}'`,
+        });
+        continue;
+      }
+      const expectedInches =
+        measurement.unit === 'in'
+          ? measurement.value
+          : measurement.unit === 'cm'
+            ? measurement.value / 2.54
+            : measurement.value / 25.4;
+      fit.push({ field: 'fit', expectedInches, factId: f.id });
       continue;
     }
     if (f.value.kind !== 'facet' || !PRODUCT_FIELDS.has(f.value.attribute)) {
@@ -376,7 +439,7 @@ function compile(
         reason: 'Only exact single-value facet comparisons are supported',
       });
   }
-  return { filters, unresolved, material };
+  return { filters, unresolved, material, fit };
 }
 export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
   const now = options.now ?? (() => new Date().toISOString());
@@ -435,7 +498,7 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
       );
     const compiled =
       input.source === 'blog'
-        ? { filters: [], unresolved: [], material: [] }
+        ? { filters: [], unresolved: [], material: [], fit: [] }
         : compile(
             state,
             input.target
@@ -505,6 +568,7 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
       const incomplete: Array<{ field: string; reason: string }> = [];
       const materialUnknown: Array<{ field: string; reason: string }> = [];
       const watchUnknown: Array<{ field: string; reason: string }> = [];
+      const fitUnknown: Array<{ field: string; reason: string }> = [];
       const exactIDs = input.exactObjectIDs ? new Set(input.exactObjectIDs) : null;
       const records = hits.flatMap((raw): EvidenceRecord[] => {
         if (exactIDs && (typeof raw.objectID !== 'string' || !exactIDs.has(raw.objectID)))
@@ -520,6 +584,43 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
           return [];
         }
         if (materialStatus === 'conflict') return [];
+        // Fit verification (fail closed, ALL compiled fit expectations): the
+        // returned record's own size vocabulary must contain every expected
+        // measurement. A record without the size field, or without a matching
+        // size for any compiled fit fact, is a verification failure, never a
+        // silent pass (round-3 review P2: fit[0]-only was fail-open).
+        if (input.source === 'prod_catalog' && compiled.fit.length) {
+          const sizes = record.Inventory_AvailableSkuSizeNames;
+          const parsedSizes = Array.isArray(sizes)
+            ? sizes.map((entry) => {
+                if (typeof entry !== 'string') return Number.NaN;
+                const inches = /^\s*(\d+(?:\.\d+)?)\s*(?:inch(?:es)?|in|")\s*$/i.exec(entry);
+                return inches ? Number(inches[1]) : Number.NaN;
+              })
+            : [];
+          const unmet = compiled.fit.filter(({ expectedInches, factId }) => {
+            const match = parsedSizes.some(
+              (parsed) => Number.isFinite(parsed) && Math.abs(parsed - expectedInches) < 1e-9,
+            );
+            return !match;
+          });
+          if (!Array.isArray(sizes) || sizes.length === 0) {
+            fitUnknown.push({
+              field: 'fit',
+              reason: `Required size evidence missing: Inventory_AvailableSkuSizeNames is absent or unreadable on this record (fact ${compiled.fit[0].factId})`,
+            });
+            return [];
+          }
+          if (unmet.length) {
+            fitUnknown.push({
+              field: 'fit',
+              reason: `Required size evidence mismatch: record sizes ${JSON.stringify(sizes)} do not contain the expected measurement(s) ${unmet
+                .map((entry) => Number(entry.expectedInches.toFixed(6)))
+                .join(', ')} (fact ${unmet[0].factId})`,
+            });
+            return [];
+          }
+        }
         if (input.source === 'prod_catalog') {
           const watchStatus = watchFeatureStatus(record, compiled.filters);
           if (watchStatus === 'unknown') {
@@ -568,22 +669,23 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
         ];
       });
       const returned = records.slice(0, input.count);
-      if ((incomplete.length || watchUnknown.length) && !returned.length)
+      if ((incomplete.length || watchUnknown.length || fitUnknown.length) && !returned.length)
         return makeResult(input, state.revision, 'incomplete_evidence', compiled.filters, [
           ...incomplete,
           ...materialUnknown,
           ...watchUnknown,
+          ...fitUnknown,
         ]);
       return makeResult(
         input,
         state.revision,
         returned.length
           ? 'ok'
-          : materialUnknown.length || watchUnknown.length
+          : materialUnknown.length || watchUnknown.length || fitUnknown.length
             ? 'incomplete_evidence'
             : 'zero_hits',
         compiled.filters,
-        [...incomplete, ...materialUnknown, ...watchUnknown],
+        [...incomplete, ...materialUnknown, ...watchUnknown, ...fitUnknown],
         returned,
       );
     } catch (error) {
