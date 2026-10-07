@@ -625,6 +625,55 @@ describe('update_shopping_state domain callback', () => {
         ?.code,
     ).toBe('UNSUPPORTED_FACT_ENCODING');
   });
+  it('accepts a material-colour exclusion facet and rejects unsupported colour values', async () => {
+    const make = (id: string, values: string[], operator: 'none' | 'any' = 'none') => ({
+      missionId: 'mission-1',
+      expectedRevision: 0,
+      operationId: id,
+      sourceMessageId: message.id,
+      operations: [
+        {
+          action: 'add',
+          factIds: [],
+          sourceQuote: 'exclude colour',
+          fact: {
+            id,
+            field: 'exclusion',
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_MaterialInformation.MaterialColor',
+              values,
+              operator,
+            },
+            scope: { kind: 'mission', key: null },
+            strength: 'requirement',
+            certainty: 'explicit',
+          },
+        },
+      ],
+    });
+    const applied = await updateShoppingState(base(), make('no-yellow', ['Yellow']), {
+      id: message.id,
+      text: 'exclude colour',
+    });
+    expect(applied.result.status).toBe('applied');
+    const twoTone = await updateShoppingState(
+      applied.state,
+      { ...make('no-two-tone', ['Two-tone']), expectedRevision: 1 },
+      { id: message.id, text: 'exclude colour' },
+    );
+    expect(twoTone.result.status).toBe('applied');
+    const unknownColour = await updateShoppingState(base(), make('no-chartreuse', ['Chartreuse']), {
+      id: message.id,
+      text: 'exclude colour',
+    });
+    expect(unknownColour.result.failure?.code).toBe('UNSUPPORTED_FACT_ENCODING');
+    const wrongOperator = await updateShoppingState(base(), make('yellow-any', ['Yellow'], 'any'), {
+      id: message.id,
+      text: 'exclude colour',
+    });
+    expect(wrongOperator.result.failure?.code).toBe('UNSUPPORTED_FACT_ENCODING');
+  });
   it('accepts an empty structural operation list but returns a retryable no-op failure', async () => {
     const empty = {
       missionId: 'mission-1',

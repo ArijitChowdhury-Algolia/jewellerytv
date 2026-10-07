@@ -331,7 +331,10 @@ function compile(
     }
     if (
       f.field === 'material' ||
-      MATERIAL_FIELDS.has(f.value.kind === 'facet' ? f.value.attribute : '')
+      MATERIAL_FIELDS.has(f.value.kind === 'facet' ? f.value.attribute : '') ||
+      (f.field === 'exclusion' &&
+        f.value.kind === 'facet' &&
+        MATERIAL_ATTRIBUTE_PATHS.has(f.value.attribute))
     ) {
       if (f.value.kind === 'facet' && MATERIAL_ATTRIBUTE_PATHS.has(f.value.attribute)) {
         material.push({

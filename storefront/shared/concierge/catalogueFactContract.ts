@@ -30,6 +30,30 @@ export const PRODUCT_TYPES = [
 ] as const;
 export const EXCLUSION_PRODUCT_TYPES = PRODUCT_TYPES;
 export const EXCLUSION_MOTIFS = ['Heart'] as const;
+/** Catalog_MaterialInformation.MaterialColor is a nested, non-faceted attribute. Its
+ * exclusion vocabulary reuses the verified navigation colour list; keep it identical to
+ * catalogueFacetValues.json values['Catalog_MaterialInformation.MaterialColor'].
+ * Observed record colours so far (White, Yellow, Blue) are a subset. */
+export const MATERIAL_COLOR_EXCLUSION_ATTRIBUTE =
+  'Catalog_MaterialInformation.MaterialColor' as const;
+export const EXCLUSION_MATERIAL_COLORS = [
+  'Black',
+  'Blue',
+  'Brown',
+  'Gray',
+  'Green',
+  'Multi-color',
+  'No Color',
+  'Orange',
+  'Pink',
+  'Purple',
+  'Red',
+  'Rose',
+  'Tri-color',
+  'Two-tone',
+  'White',
+  'Yellow',
+] as const;
 export type SupportedFacetField = keyof typeof SUPPORTED_FACET_ATTRIBUTES;
 export function facetAttributeForField(field: string) {
   return field === 'product_type'

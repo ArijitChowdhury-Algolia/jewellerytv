@@ -15,6 +15,8 @@ import {
   MATERIAL_ALTERNATIVE_PURITIES,
   PRODUCT_TYPES,
   EXCLUSION_MOTIFS,
+  EXCLUSION_MATERIAL_COLORS,
+  MATERIAL_COLOR_EXCLUSION_ATTRIBUTE,
   WATCH_BAND_MATERIAL_FAMILIES,
 } from '../catalogueFactContract.js';
 
@@ -254,7 +256,10 @@ function toBriefFact(
                 ? 'Catalog_ProductType'
                 : f.field === 'exclusion' && facet.attribute === 'Catalog_Motif'
                   ? 'Catalog_Motif'
-                  : undefined;
+                  : f.field === 'exclusion' &&
+                      facet.attribute === MATERIAL_COLOR_EXCLUSION_ATTRIBUTE
+                    ? MATERIAL_COLOR_EXCLUSION_ATTRIBUTE
+                    : undefined;
     if (!expected || facet.attribute !== expected)
       throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
     if (
@@ -280,7 +285,11 @@ function toBriefFact(
           ? facet.values.some((value) => !(PRODUCT_TYPES as readonly string[]).includes(value))
           : facet.attribute === 'Catalog_Motif'
             ? facet.values.some((value) => !(EXCLUSION_MOTIFS as readonly string[]).includes(value))
-            : true))
+            : facet.attribute === MATERIAL_COLOR_EXCLUSION_ATTRIBUTE
+              ? facet.values.some(
+                  (value) => !(EXCLUSION_MATERIAL_COLORS as readonly string[]).includes(value),
+                )
+              : true))
     )
       throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
     const allowed = (facetCatalogue.values as Record<string, string[]>)[facet.attribute];
