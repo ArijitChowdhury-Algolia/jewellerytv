@@ -339,7 +339,3 @@ export function commitStagedChoices(
     return { status: 'stale_state', proposal: priorProposal };
   return { status: 'committed', proposal: staged };
 }
-
-export const prepareProductChoices = presentChoices;
-export const stageProductChoices = presentChoices;
-export const commitProductChoices = commitStagedChoices;

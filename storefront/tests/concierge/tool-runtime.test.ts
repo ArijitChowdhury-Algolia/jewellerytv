@@ -279,6 +279,182 @@ describe('API-only Concierge client tool runtime', () => {
       ).status,
     ).toBe('invalid_input');
   });
+  it('advertises short turn-scoped aliases and resolves them to canonical evidence', async () => {
+    const runtime = createConciergeToolRuntime({
+      storage: memoryStorage(),
+      initialMissionId: 'mission-1',
+      getCurrentShopperMessage: () => shopper,
+      fetchEvidence: async (body) => ({
+        status: 'ok',
+        source: body.input.source,
+        missionId: body.input.missionId,
+        revision: body.input.expectedRevision,
+        expectedRevision: body.input.expectedRevision,
+        turnId: body.input.turnId,
+        effectiveFilters: [],
+        unresolved: [],
+        records: [evidence],
+      }),
+    });
+    await runtime.update(stateInput);
+    runtime.beginTurn('turn-1', shopper.id);
+    const retrieved = await runtime.retrieveSemantic(
+      {
+        source: 'prod_catalog',
+        query: 'ring',
+        count: 1,
+        target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' },
+      },
+      'retrieve-1',
+    );
+    expect(retrieved.status).toBe('ok');
+    if (retrieved.status !== 'ok' || !('records' in retrieved)) return;
+    const alias = retrieved.records[0].evidenceRef;
+    expect(alias).toMatch(/^ev_[a-f0-9]{16}_[a-z0-9]+$/);
+    expect(alias.length).toBeLessThanOrEqual(30);
+    expect(alias).not.toBe(evidence.evidenceRef);
+    const mismatch = await runtime.presentSemantic(
+      {
+        body: {
+          kind: 'product_groups',
+          groups: [
+            {
+              basis: { attribute: 'Catalog_ProductType', value: 'Necklace' },
+              items: [
+                { evidenceRef: alias, quantity: 1, componentSlot: 'ring', explanation: 'Useful' },
+              ],
+            },
+          ],
+          alternatives: null,
+        },
+      },
+      'present-mismatch',
+    );
+    expect(mismatch).toMatchObject({
+      status: 'invalid_input',
+      basisFailure: { evidenceRef: alias },
+    });
+    const presented = await runtime.presentSemantic(
+      {
+        body: {
+          kind: 'product_groups',
+          groups: [
+            {
+              basis: { attribute: 'Catalog_ProductType', value: 'Ring' },
+              items: [
+                { evidenceRef: alias, quantity: 1, componentSlot: 'ring', explanation: 'Useful' },
+              ],
+            },
+          ],
+          alternatives: null,
+        },
+      },
+      'present-alias',
+    );
+    expect(presented.status).toBe('staged');
+    if (presented.status === 'staged' && 'proposal' in presented) {
+      expect(presented.proposal.groups[0].lines[0]).toMatchObject({
+        objectID: 'ring-1',
+        contentHash: 'hash-1',
+        evidenceRef: alias,
+      });
+    }
+    expect(runtime.finishTurn('turn-1', 'completed')?.groups[0].lines[0]).toMatchObject({
+      evidenceRef: evidence.evidenceRef,
+      objectID: evidence.objectID,
+      contentHash: evidence.contentHash,
+    });
+  });
+  it('rejects aliases from an earlier batch and does not allow blog aliases in product presentation', async () => {
+    let source: 'prod_catalog' | 'blog' = 'prod_catalog';
+    const runtime = createConciergeToolRuntime({
+      storage: memoryStorage(),
+      initialMissionId: 'mission-1',
+      getCurrentShopperMessage: () => shopper,
+      fetchEvidence: async (body) => ({
+        status: 'ok',
+        source: body.input.source,
+        missionId: body.input.missionId,
+        revision: body.input.expectedRevision,
+        expectedRevision: body.input.expectedRevision,
+        turnId: body.input.turnId,
+        effectiveFilters: [],
+        unresolved: [],
+        records: [
+          {
+            ...evidence,
+            source,
+            evidenceRef: source === 'blog' ? 'blog/article/hash' : evidence.evidenceRef,
+          },
+        ],
+      }),
+    });
+    await runtime.update(stateInput);
+    runtime.beginTurn('turn-1', shopper.id);
+    const first = await runtime.retrieveSemantic(
+      {
+        source: 'prod_catalog',
+        query: 'ring',
+        count: 1,
+        target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' },
+      },
+      'retrieve-1',
+    );
+    if (first.status !== 'ok' || !('records' in first))
+      throw new Error('Expected product retrieval');
+    const oldAlias = first.records[0].evidenceRef;
+    runtime.beginTurn('turn-2', shopper.id);
+    const stale = await runtime.presentSemantic(
+      {
+        body: {
+          kind: 'product_groups',
+          groups: [
+            {
+              basis: { attribute: 'Catalog_ProductType', value: 'Ring' },
+              items: [
+                { evidenceRef: oldAlias, quantity: 1, componentSlot: 'ring', explanation: 'Old' },
+              ],
+            },
+          ],
+          alternatives: null,
+        },
+      },
+      'present-stale',
+    );
+    expect(stale).toMatchObject({
+      status: 'invalid_evidence',
+      invalidEvidenceRefs: [oldAlias],
+    });
+    source = 'blog';
+    const blog = await runtime.retrieveSemantic(
+      { source: 'blog', query: 'guide', count: 1, target: null },
+      'retrieve-blog',
+    );
+    expect(blog.status).toBe('ok');
+    if (blog.status !== 'ok' || !('records' in blog)) return;
+    const blogAlias = blog.records[0].evidenceRef;
+    const blogPresentation = await runtime.presentSemantic(
+      {
+        body: {
+          kind: 'product_groups',
+          groups: [
+            {
+              basis: { attribute: 'Catalog_ProductType', value: 'Ring' },
+              items: [
+                { evidenceRef: blogAlias, quantity: 1, componentSlot: 'ring', explanation: 'Blog' },
+              ],
+            },
+          ],
+          alternatives: null,
+        },
+      },
+      'present-blog',
+    );
+    expect(blogPresentation).toMatchObject({
+      status: 'invalid_evidence',
+      invalidEvidenceRefs: [blogAlias],
+    });
+  });
   it('injects state-update identity and replays one semantic tool call without a duplicate fact', async () => {
     const runtime = createConciergeToolRuntime({
       storage: memoryStorage(),

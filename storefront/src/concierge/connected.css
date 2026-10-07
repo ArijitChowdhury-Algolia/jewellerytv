@@ -70,6 +70,36 @@
 .connected-header {
   flex: none;
 }
+.concierge-header {
+  position: relative;
+}
+.concierge-header[data-working='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, #b9f4f3, #fff);
+  animation: concierge-progress-travel 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes concierge-progress-travel {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(335%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .concierge-header[data-working='true']::after {
+    animation: none;
+    transform: none;
+    width: 100%;
+    background: #b9f4f3;
+  }
+}
 .connected-body {
   min-height: 0;
 }
