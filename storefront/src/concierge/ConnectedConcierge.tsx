@@ -12,6 +12,7 @@ import {
 import { useChat } from 'react-instantsearch';
 import type { ChatOnFinishCallback, UIMessage } from 'instantsearch.js/es/lib/ai-lite';
 import Markdown from 'markdown-to-jsx';
+import { X } from 'lucide-react';
 import { ShoppingWorkspace } from '../ShoppingWorkspace';
 import { ConciergeWorkspaceLayout } from './ConciergeWorkspaceLayout';
 import { ConnectedShoppingBrief } from './ConnectedShoppingBrief';
@@ -617,10 +618,12 @@ export function ConnectedConcierge({
             New
           </button>
           <div ref={setBriefControls} className="brief-header-controls" />
-          <button type="button" aria-label="Close Concierge" onClick={onClose}>
-            Close
-          </button>
         </>
+      }
+      closeAction={
+        <button type="button" aria-label="Close Concierge" title="Close" onClick={onClose}>
+          <X size={18} aria-hidden="true" />
+        </button>
       }
       preferenceContent={
         brief ? (
@@ -686,6 +689,7 @@ export function ConnectedConcierge({
       }
       composer={
         <form className="connected-prompt" onSubmit={send}>
+          <span className="connected-prompt-hint">Shall we find something delighting?</span>
           <div className="connected-prompt-row">
             <input
               id="connected-concierge-input"
@@ -693,7 +697,7 @@ export function ConnectedConcierge({
               value={chat.input}
               onChange={(event) => chat.setInput(event.currentTarget.value)}
               disabled={!!pending || resetting || !!blocked}
-              placeholder="What are you looking for?"
+              placeholder="Shall we find something delighting?"
               autoComplete="off"
             />
             <button
