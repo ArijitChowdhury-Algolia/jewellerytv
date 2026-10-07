@@ -727,10 +727,14 @@
   border-bottom: 0;
   padding-bottom: 0;
 }
+.pw-discovery-groups[data-group-count='1'] .pw-group-items:has(> .pw-product:only-child) .pw-image {
+  aspect-ratio: auto;
+  block-size: clamp(220px, 34cqw, 350px);
+}
 .pw-discovery-groups[data-group-count='1']
   .pw-group-items:has(> .pw-product:nth-child(2))
   .pw-image {
-  block-size: clamp(220px, 34cqw, 350px);
+  block-size: clamp(180px, 28cqw, 300px);
 }
 .pw-empty-brand p {
   font-size: clamp(16px, 1.7vw, 20px);
