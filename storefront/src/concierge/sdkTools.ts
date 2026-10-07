@@ -209,6 +209,31 @@ function normalizePresent(input: unknown) {
   return presentShape.parse({ body: normalized });
 }
 
+function presentationInputFailure(error: unknown) {
+  const expected = [
+    'body.kind=product_groups with non-empty groups and alternatives=null',
+    'body.kind=complete_looks with groups=null and non-empty alternatives',
+  ];
+  if (error instanceof z.ZodError) {
+    return {
+      status: 'invalid_input',
+      reasons: ['semantic_presentation_invalid'],
+      paths: error.issues.slice(0, 8).map((issue) => ({
+        path: issue.path.join('.') || 'body',
+        code: issue.code,
+      })),
+      expected,
+    };
+  }
+  const reason = error instanceof Error ? error.message : 'semantic_presentation_invalid';
+  return {
+    status: 'invalid_input',
+    reasons: [reason.slice(0, 80)],
+    paths: [{ path: 'body', code: 'invalid' }],
+    expected,
+  };
+}
+
 /** The SDK bridge accepts semantic fields only. Runtime owns identity and revisions. */
 export function createSdkClientTools(
   runtime: Pick<
@@ -279,8 +304,15 @@ export function createSdkClientTools(
         if (signal.aborted) return;
         runtime.notePresentationAttempt(token ?? undefined);
         try {
+          let normalized;
+          try {
+            normalized = normalizePresent(input);
+          } catch (error) {
+            if (!signal.aborted) await addToolResult({ output: presentationInputFailure(error) });
+            return;
+          }
           const output = await enqueue(() =>
-            runtime.presentSemantic(normalizePresent(input), toolCallId, token ?? undefined),
+            runtime.presentSemantic(normalized, toolCallId, token ?? undefined),
           );
           if (!signal.aborted) await addToolResult({ output });
         } catch {

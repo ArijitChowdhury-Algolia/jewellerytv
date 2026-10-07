@@ -130,7 +130,7 @@ describe('installed SDK client-tool callback registration', () => {
     await Promise.all([first, second]);
     expect(order).toEqual(['update-start', 'update-end', 'retrieve']);
   });
-  it('records a presentation attempt even when semantic input fails before runtime staging', async () => {
+  it('returns structured invalid_input for contradictory presentation branches without calling runtime', async () => {
     const notePresentationAttempt = vi.fn(() => true);
     const presentSemantic = vi.fn(async () => ({ status: 'staged' }));
     const tools = createSdkClientTools({
@@ -140,10 +140,59 @@ describe('installed SDK client-tool callback registration', () => {
       getActiveTurnToken: vi.fn(() => 3),
       notePresentationAttempt,
     } as unknown as Runtime);
-    const failed = call(tools.present_choices.onToolCall!, { body: { kind: 'not-a-choice' } });
+    const failed = call(tools.present_choices.onToolCall!, {
+      body: {
+        kind: 'product_groups',
+        groups: null,
+        alternatives: [{ title: 'Look', lines: [] }],
+      },
+    });
     await failed.run();
     expect(notePresentationAttempt).toHaveBeenCalledWith(3);
     expect(presentSemantic).not.toHaveBeenCalled();
+    expect(failed.addToolResult).toHaveBeenCalledWith({
+      output: expect.objectContaining({
+        status: 'invalid_input',
+        reasons: ['semantic_presentation_invalid'],
+        expected: expect.arrayContaining([
+          'body.kind=product_groups with non-empty groups and alternatives=null',
+          'body.kind=complete_looks with groups=null and non-empty alternatives',
+        ]),
+      }),
+    });
+  });
+  it('keeps actual presentation runtime exceptions as tool_failure', async () => {
+    const presentSemantic = vi.fn(async () => {
+      throw new Error('runtime only');
+    });
+    const tools = createSdkClientTools({
+      updateSemantic: vi.fn(async () => ({ status: 'applied' })),
+      retrieveSemantic: vi.fn(async () => ({ status: 'ok' })),
+      presentSemantic,
+      getActiveTurnToken: vi.fn(() => 3),
+      notePresentationAttempt: vi.fn(() => true),
+    } as unknown as Runtime);
+    const failed = call(tools.present_choices.onToolCall!, {
+      body: {
+        kind: 'product_groups',
+        groups: [
+          {
+            basis: { attribute: 'Catalog_ProductType', value: 'Ring' },
+            items: [
+              {
+                evidenceRef: 'alias-1',
+                quantity: 1,
+                componentSlot: 'ring',
+                explanation: 'A ring',
+              },
+            ],
+          },
+        ],
+        alternatives: null,
+      },
+    });
+    await failed.run();
+    expect(presentSemantic).toHaveBeenCalledOnce();
     expect(failed.addToolResult).toHaveBeenCalledWith({
       output: { status: 'tool_failure', code: 'PRESENTATION_CALLBACK_FAILED' },
     });
