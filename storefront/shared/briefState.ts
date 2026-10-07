@@ -79,6 +79,26 @@ export type BriefPatchV3 = {
     | { type: 'retract'; factIds: string[] }
   )[];
 };
+// Scope keys retain their exact identity. Folding only detects ambiguous new keys.
+function hasItemScopeCollision(state: BriefStateV3, input: BriefPatchV3): boolean {
+  const incoming = input.operations.flatMap((operation) =>
+    'fact' in operation && operation.fact.scope.kind === 'item' && operation.fact.scope.key
+      ? [operation.fact.scope.key]
+      : [],
+  );
+  const live = state.facts.flatMap((fact) =>
+    (fact.status === 'active' || fact.status === 'tentative') && fact.scope.kind === 'item'
+      ? [fact.scope.key!]
+      : [],
+  );
+  return incoming.some((key) =>
+    [...incoming, ...live].some(
+      (other) =>
+        other !== key &&
+        other.normalize('NFKC').toLowerCase() === key.normalize('NFKC').toLowerCase(),
+    ),
+  );
+}
 export function applyBriefOperationsV3(
   state: BriefStateV3,
   input: BriefPatchV3,
@@ -128,6 +148,7 @@ export function applyBriefOperationsV3(
       });
     }
   }
+  if (hasItemScopeCollision(next, input)) throw new Error('ITEM_SCOPE_KEY_COLLISION');
   next.revision = revision;
   next.processedTurns = [...next.processedTurns, input.turnId].slice(-200);
   next.tombstones = next.tombstones.slice(-200);
