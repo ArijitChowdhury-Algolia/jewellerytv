@@ -7,7 +7,7 @@ const records = Array.from({ length: 6 }, (_, index) => {
   const objectID = `SAVED-${index + 1}`;
   return {
     objectID,
-    Catalog_TitleDescription: `Sterling silver chain necklace ${index + 1}`,
+    Catalog_TitleDescription: `Sterling silver diamond-cut chain necklace with a detailed clasp and extended description ${index + 1}`,
     Pricing_ActivePrice: 45 + index * 5,
     Media_Images: [],
   };
@@ -47,7 +47,8 @@ const session = {
 test('six saved pieces can be compared, narrowed, and restored without deleting saves', async ({
   browser,
 }) => {
-  for (const width of [1440, 375]) {
+  test.setTimeout(60_000);
+  for (const width of [1440, 1024, 768, 375]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage();
     const exactRefreshes: string[][] = [];
@@ -128,6 +129,44 @@ test('six saved pieces can be compared, narrowed, and restored without deleting 
       const workspace = panel.getByRole('region', { name: 'Shopping choices' });
       const savedCards = workspace.locator('.pw-saved .pw-product[data-product-id]');
       await expect(savedCards).toHaveCount(6);
+      const cardGeometry = await savedCards.evaluateAll((cards) =>
+        cards.map((card) => {
+          const box = (element: Element | null) => {
+            if (!element) return null;
+            const rect = element.getBoundingClientRect();
+            return { left: rect.left, right: rect.right, width: rect.width };
+          };
+          const title = card.querySelector('h3');
+          const actions = card.querySelector('.pw-actions');
+          return {
+            card: box(card),
+            title: box(title),
+            titleScrollWidth: title?.scrollWidth ?? 0,
+            titleClientWidth: title?.clientWidth ?? 0,
+            actions: box(actions),
+            actionsScrollWidth: actions?.scrollWidth ?? 0,
+            actionsClientWidth: actions?.clientWidth ?? 0,
+            buttons: [...(actions?.querySelectorAll('button') ?? [])].map((button) => ({
+              ...box(button),
+              label: button.textContent?.trim(),
+            })),
+          };
+        }),
+      );
+      for (const geometry of cardGeometry) {
+        expect(geometry.title).not.toBeNull();
+        expect(geometry.actions).not.toBeNull();
+        expect(geometry.titleScrollWidth).toBeLessThanOrEqual(geometry.titleClientWidth + 1);
+        expect(geometry.actionsScrollWidth).toBeLessThanOrEqual(geometry.actionsClientWidth + 1);
+        expect(geometry.title?.left).toBeGreaterThanOrEqual((geometry.card?.left ?? 0) - 1);
+        expect(geometry.title?.right).toBeLessThanOrEqual((geometry.card?.right ?? 0) + 1);
+        expect(geometry.actions?.left).toBeGreaterThanOrEqual((geometry.card?.left ?? 0) - 1);
+        expect(geometry.actions?.right).toBeLessThanOrEqual((geometry.card?.right ?? 0) + 1);
+        for (const button of geometry.buttons) {
+          expect(button.left).toBeGreaterThanOrEqual((geometry.card?.left ?? 0) - 1);
+          expect(button.right).toBeLessThanOrEqual((geometry.card?.right ?? 0) + 1);
+        }
+      }
       await expect(
         workspace.getByRole('navigation', { name: 'Product views' }).getByRole('button', {
           name: 'Saved (6)',
