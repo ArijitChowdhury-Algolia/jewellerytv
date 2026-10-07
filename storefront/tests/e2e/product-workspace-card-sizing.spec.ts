@@ -117,7 +117,11 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           ),
         ];
         const noop = () => undefined;
-        const model = (count: number, groupCount: number) => {
+        const model = (
+          count: number,
+          groupCount: number,
+          activeView: 'discover' | 'saved' | 'compare' | 'combination' = 'discover',
+        ) => {
           const items = products.slice(0, count).map((product, index) => ({
             product,
             why:
@@ -146,16 +150,18 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           return {
             products:
               count === 3
-                ? products
-                    .slice(1)
-                    .map((product) => ({ product, quantity: 1, observedAt: 'fixture' }))
+                ? products.slice(0, 3).map((product) => ({
+                    product,
+                    quantity: 1,
+                    observedAt: 'fixture',
+                  }))
                 : [],
             selectionRecords: products.slice(0, count),
             discoveries,
-            activeView: 'discover' as const,
+            activeView,
             setView: noop,
-            compareIds: count === 3 ? [products[1].id] : [],
-            combinationIds: [],
+            compareIds: count === 3 ? [products[0].id, products[1].id] : [],
+            combinationIds: count === 3 ? [products[0].id, products[1].id] : [],
             combinationQuantities: {},
             toggleCompare: noop,
             toggleCombination: noop,
@@ -170,8 +176,14 @@ test('single discovery card stays compact and multi-card shelves remain balanced
           };
         };
         Object.assign(window, {
-          renderProductFixture(count: number, groupCount: number) {
-            root.render(React.createElement(ProductWorkspace, { model: model(count, groupCount) }));
+          renderProductFixture(
+            count: number,
+            groupCount: number,
+            view: 'discover' | 'saved' | 'compare' | 'combination' = 'discover',
+          ) {
+            root.render(
+              React.createElement(ProductWorkspace, { model: model(count, groupCount, view) }),
+            );
           },
         });
       });
@@ -357,6 +369,97 @@ test('single discovery card stays compact and multi-card shelves remain balanced
             true,
           );
         }
+      }
+
+      for (const view of ['saved', 'compare', 'combination'] as const) {
+        await page.evaluate((nextView) => {
+          (
+            window as unknown as {
+              renderProductFixture: (count: number, groups: number, view: string) => void;
+            }
+          ).renderProductFixture(3, 1, nextView);
+        }, view);
+        const rows = page.locator(
+          view === 'saved' ? '.pw-saved .pw-actions' : '.pw-selection .pw-compare-actions',
+        );
+        await expect(rows).toHaveCount(view === 'saved' ? 3 : 2);
+        const imageHeights = await page
+          .locator(
+            view === 'saved' ? '.pw-saved .pw-image' : '.pw-selection .pw-compare-image .pw-image',
+          )
+          .evaluateAll((images) => images.map((image) => image.getBoundingClientRect().height));
+        const maxImageHeight = view === 'saved' ? (viewport.width <= 480 ? 240 : 360) : 200;
+        expect(
+          imageHeights.every((height) => height <= maxImageHeight),
+          `${view} images stay bounded at ${viewport.width}px`,
+        ).toBe(true);
+        if (view === 'combination' && viewport.width <= 480) {
+          const columns = await page
+            .locator('.pw-comparison')
+            .evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(' ').length);
+          expect(columns).toBe(1);
+        }
+        const geometry = await rows.evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const box = node.getBoundingClientRect();
+            const buttons = [...node.children].filter((child) => child.tagName === 'BUTTON');
+            return {
+              display: getComputedStyle(node).display,
+              columns: getComputedStyle(node).gridTemplateColumns.split(' ').length,
+              top: box.top,
+              x: box.x,
+              right: box.right,
+              buttons: buttons.map((button) => {
+                const rect = button.getBoundingClientRect();
+                const style = getComputedStyle(button);
+                return {
+                  x: rect.x,
+                  right: rect.right,
+                  top: rect.top,
+                  bottom: rect.bottom,
+                  height: rect.height,
+                  borderWidth: style.borderTopWidth,
+                  radius: style.borderTopLeftRadius,
+                };
+              }),
+            };
+          }),
+        );
+        for (const row of geometry) {
+          expect(row.display, `${view} action layout`).toBe('grid');
+          expect(row.columns, `${view} action columns`).toBe(2);
+          expect(row.buttons, `${view} action count`).toHaveLength(3);
+          expect(row.x, `${view} action left edge`).toBeGreaterThanOrEqual(-1);
+          expect(row.right, `${view} action right edge`).toBeLessThanOrEqual(viewport.width + 1);
+          expect(row.buttons[0].top).toBe(row.buttons[1].top);
+          expect(row.buttons[2].top).toBeGreaterThanOrEqual(row.buttons[0].bottom);
+          expect(row.buttons[2].x).toBeGreaterThanOrEqual(row.x - 1);
+          expect(row.buttons[2].right).toBeLessThanOrEqual(row.right + 1);
+          expect(row.buttons.every((button) => button.height >= 44)).toBe(true);
+          expect(row.buttons.every((button) => button.borderWidth === '1px')).toBe(true);
+          expect(row.buttons.every((button) => button.radius === '4px')).toBe(true);
+        }
+        const alignedRows =
+          view === 'saved'
+            ? viewport.width >= 900
+              ? geometry
+              : viewport.width >= 480
+                ? geometry.slice(0, 2)
+                : []
+            : viewport.width >= 768
+              ? geometry
+              : [];
+        if (alignedRows.length > 1) {
+          const tops = alignedRows.map((row) => row.top);
+          expect(
+            Math.max(...tops) - Math.min(...tops),
+            `${view} action row alignment`,
+          ).toBeLessThanOrEqual(2);
+        }
+        await page.screenshot({
+          path: path.join(runDir, `${viewport.width}-${view}-actions.png`),
+          fullPage: true,
+        });
       }
       await context.close();
     }
