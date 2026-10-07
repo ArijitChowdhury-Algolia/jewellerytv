@@ -14,44 +14,155 @@
       "auxiliaries": "classifier and suggestion calls are unknown unless separately observable",
       "maximumCompletionRequests": "must be set explicitly before a live run; never inferred from shopper-turn count"
     },
+    "repetitions": {
+      "critical": 3,
+      "standard": 2,
+      "wordingVariantsReserved": 1,
+      "criticalFocus": [
+        "factual-grounding",
+        "identity",
+        "constraints",
+        "scope",
+        "arithmetic",
+        "acceptance",
+        "stale-state",
+        "source-restrictions",
+        "unknown-conflicting-evidence"
+      ],
+      "source": "docs/workspace/phase-3-explain-compare/test-plan.md execution rules"
+    },
+    "deadlines": {
+      "liveReplySeconds": 180,
+      "uiActionSeconds": 15,
+      "transportRetriesPerTurn": 1,
+      "source": "docs/workspace/phase-3-explain-compare/test-plan.md execution rules"
+    },
     "evidenceModes": {
       "live": "Assertions use rendered UI state and observed SDK/API transport without prescribing assistant wording.",
       "fixture": "Adverse evidence is injected only by an explicitly named route fixture; it is never presented as live evidence."
-    }
+    },
+    "wordingVariantsDeclared": [
+      {
+        "forScenarioId": "broad-gift-saved-downselect",
+        "turnIndex": 0,
+        "variantText": "My sister's birthday is coming up and I want something she can wear anywhere. I can spend no more than 250 dollars on it.",
+        "whyAdverseOrVaried": "Swaps 'under $250' for 'no more than 250', an inclusive ceiling. Adverse because exactly-250 items qualify under this wording, so retrieval and assessment must preserve inclusive boundary semantics instead of normalizing to 'under'.",
+        "mode": "reserved; runs only with JTV_WORDING_VARIANTS=1 and consumes the same budget"
+      },
+      {
+        "forScenarioId": "ring-gift-compare-correction",
+        "turnIndex": 2,
+        "variantText": "Hold on, I think I misled myself earlier. It really has to land below 150 all in. Please look at my saved options again with that correction.",
+        "whyAdverseOrVaried": "Frames the budget correction as the shopper's own earlier mistake rather than a new rule, and 'all in' implies a combined basis. Adverse because it tests mid-flow correction: comparison must refresh without resetting the brief or re-running intake.",
+        "mode": "reserved; runs only with JTV_WORDING_VARIANTS=1 and consumes the same budget"
+      },
+      {
+        "forScenarioId": "necklace-liked-anchor-replace-companion",
+        "turnIndex": 2,
+        "variantText": "The earrings are not doing it for me. Could we try something more understated for the ears? The necklace stays as it is.",
+        "whyAdverseOrVaried": "Drops both the explicit product form (studs) and the measurable property (lightweight), leaving a vague component reference plus a restated anchor. Adverse because the agent must resolve the replacement from context without inventing a weight claim or dropping the anchor.",
+        "mode": "reserved; runs only with JTV_WORDING_VARIANTS=1 and consumes the same budget"
+      },
+      {
+        "forScenarioId": "bracelet-blog-care-detour",
+        "turnIndex": 3,
+        "variantText": "Thank you, this is plenty to go on for now. I may come back to it another day.",
+        "whyAdverseOrVaried": "A polite soft stop with a hinted return and no imperative word like stop. Adverse because suggestions or further searches after it violate stopping-respected, while a cold goodbye reply would misread the rapport the playbook asks for.",
+        "mode": "reserved; runs only with JTV_WORDING_VARIANTS=1 and consumes the same budget"
+      },
+      {
+        "forScenarioId": "watch-gift-compare-downselect",
+        "turnIndex": 1,
+        "variantText": "What else have you got that might work for him? I would like to see how they differ, side by side.",
+        "whyAdverseOrVaried": "Removes the explicit count ('two meaningful alternatives') and the word compare, replacing them with an open request plus a side-by-side hint. Adverse because the agent must choose bounded curation itself and recognize comparison intent without keyword echoing.",
+        "mode": "reserved; runs only with JTV_WORDING_VARIANTS=1 and consumes the same budget"
+      },
+      {
+        "forScenarioId": "necklace-scope-education-resume",
+        "turnIndex": 3,
+        "variantText": "Sorry, where were we? It was those two necklaces from earlier, and one of them had a detail I liked but I cannot remember which.",
+        "whyAdverseOrVaried": "Turns the crisp 'Back to those two' into a delayed resumption with admitted memory loss and a partial detail. Adverse because the agent must restore the exact same two identities from stable references without restarting intake, re-listing fresh products, or guessing which detail the shopper means.",
+        "mode": "reserved; runs only with JTV_WORDING_VARIANTS=1 and consumes the same budget"
+      }
+    ]
   },
+  "connectedSlices": [
+    {
+      "id": "stage6-replacement",
+      "status": "declared-not-launched",
+      "purpose": "Bounded connected slice proving the replacement path end to end: accepted anchor preserved across a component swap, yellow-gold exclusion upheld, exact cents subtotal with unknowns withheld, guardrail withholding on a conflicting look, and a visible committed look after the swap.",
+      "launchGate": "Requires Controller slot handback, Claude 1 C4 verified (landed per PLAN-3.1-STATUS Stage 3 row), Dev2 Stage 5 stability, and an explicit per-slice completion budget.",
+      "route": "/category/necklaces",
+      "turns": 8,
+      "evidenceLabels": [
+        "live"
+      ],
+      "mustProve": [
+        "accepted-anchor-preserved",
+        "yellow-gold-exclusion-upheld",
+        "exact-cents-subtotal-with-unknowns-withheld",
+        "guardrail-withholding-disclosed",
+        "visible-commit-after-swap"
+      ],
+      "budgetReservation": {
+        "completionRequests": 60,
+        "basis": "8 shopper turns at roughly 2 requests per turn plus retry reserve; derives from the same continuation accounting as the Stage 7 cap"
+      }
+    }
+  ],
   "adverseEvidenceFixtures": [
     {
       "id": "missing-product-weight",
       "mode": "fixture",
       "route": "**/api/agent-evidence",
       "condition": "A selected stud record has no weight field.",
-      "requiredOutcome": ["unknown-preserved", "no-dimensions-to-weight-inference"]
+      "requiredOutcome": [
+        "unknown-preserved",
+        "no-dimensions-to-weight-inference"
+      ]
     },
     {
       "id": "contradictory-plating",
       "mode": "fixture",
       "route": "**/api/agent-evidence",
       "condition": "Structured material says white gold while description says plated treatment.",
-      "requiredOutcome": ["conflict-disclosed", "affected-claim-withheld"]
+      "requiredOutcome": [
+        "conflict-disclosed",
+        "affected-claim-withheld"
+      ]
     },
     {
       "id": "incomplete-set-contents",
       "mode": "fixture",
       "route": "**/api/agent-evidence",
       "condition": "A packaged set omits a required component in the returned evidence.",
-      "requiredOutcome": ["unknown-set-contents", "no-complete-look-claim"]
+      "requiredOutcome": [
+        "unknown-set-contents",
+        "no-complete-look-claim"
+      ]
     },
     {
       "id": "blog-timeout-product-available",
       "mode": "fixture",
       "route": "**/api/agent-evidence",
       "condition": "Optional blog retrieval times out while product evidence remains available.",
-      "requiredOutcome": ["product-help-continues", "missing-guidance-disclosed-if-essential"]
+      "requiredOutcome": [
+        "product-help-continues",
+        "missing-guidance-disclosed-if-essential"
+      ]
     }
   ],
   "coverage": {
-    "journeyCount": 10,
-    "families": { "broad-jewelry": 2, "necklaces": 2, "rings": 2, "bracelets": 2, "watches": 2 },
+    "journeyCount": 14,
+    "families": {
+      "broad-jewelry": 2,
+      "necklaces": 2,
+      "rings": 2,
+      "bracelets": 2,
+      "watches": 2,
+      "continuity": 1,
+      "demo": 3
+    },
     "requiredBehaviors": [
       "gift",
       "five-to-six-saves",
@@ -69,21 +180,47 @@
       "id": "broad-gift-saved-downselect",
       "family": "broad-jewelry",
       "route": "/search",
-      "tags": ["gift", "five-to-six-saves", "compare-downselect", "compare", "downselect"],
+      "tags": [
+        "gift",
+        "five-to-six-saves",
+        "compare-downselect",
+        "compare",
+        "downselect"
+      ],
       "turns": [
         {
           "text": "I need a birthday gift for my sister, something versatile under $250.",
-          "expects": ["mission-recorded", "gift-context", "budget-recorded"]
+          "expects": [
+            "mission-recorded",
+            "gift-context",
+            "budget-recorded"
+          ]
         },
         {
           "text": "Show me at least five varied choices so I can save the ones I like.",
-          "expects": ["discovery-results", "saved-count-at-least-5"],
-          "uiActions": [{ "kind": "save-first", "count": 5 }]
+          "expects": [
+            "discovery-results",
+            "saved-count-at-least-5"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 5
+            }
+          ]
         },
         {
           "text": "I saved five. Compare these two and help me narrow them down.",
-          "expects": ["comparison-state", "downselection-request"],
-          "beforeUiActions": [{ "kind": "compare-first-saved", "count": 2 }]
+          "expects": [
+            "comparison-state",
+            "downselection-request"
+          ],
+          "beforeUiActions": [
+            {
+              "kind": "compare-first-saved",
+              "count": 2
+            }
+          ]
         }
       ]
     },
@@ -91,23 +228,38 @@
       "id": "broad-blog-detour-stop",
       "family": "broad-jewelry",
       "route": "/search",
-      "tags": ["blog-detour", "unknown", "stop"],
+      "tags": [
+        "blog-detour",
+        "unknown",
+        "stop"
+      ],
       "turns": [
         {
           "text": "I am browsing for a gift and do not know whether vermeil or solid gold is the better fit.",
-          "expects": ["education-needed", "mission-retained"]
+          "expects": [
+            "education-needed",
+            "mission-retained"
+          ]
         },
         {
           "text": "Can you explain the difference briefly, then show suitable options?",
-          "expects": ["blog-evidence-or-gap", "discovery-results"]
+          "expects": [
+            "blog-evidence-or-gap",
+            "discovery-results"
+          ]
         },
         {
           "text": "One listing says gold but I cannot tell whether the treatment is verified.",
-          "expects": ["unknown-preserved", "no-unsupported-certainty"]
+          "expects": [
+            "unknown-preserved",
+            "no-unsupported-certainty"
+          ]
         },
         {
           "text": "That is enough for now. Stop showing alternatives.",
-          "expects": ["stopping-respected"]
+          "expects": [
+            "stopping-respected"
+          ]
         }
       ]
     },
@@ -115,23 +267,41 @@
       "id": "necklace-liked-anchor-replace-companion",
       "family": "necklaces",
       "route": "/category/necklaces",
-      "tags": ["looks", "replacement", "anchor", "budget"],
+      "tags": [
+        "looks",
+        "replacement",
+        "anchor",
+        "budget"
+      ],
       "turns": [
         {
           "text": "I am shopping for my partner. Find a sapphire necklace in white gold for a complete look under $700.",
-          "expects": ["scoped-preferences", "budget-recorded"]
+          "expects": [
+            "scoped-preferences",
+            "budget-recorded"
+          ]
         },
         {
           "text": "I like the necklace you showed. Build a look around it.",
-          "expects": ["provisional-anchor", "look-candidates"]
+          "expects": [
+            "provisional-anchor",
+            "look-candidates"
+          ]
         },
         {
           "text": "Keep the necklace, but replace the earrings with lightweight studs.",
-          "expects": ["anchor-retained", "component-replacement", "whole-brief-retained"]
+          "expects": [
+            "anchor-retained",
+            "component-replacement",
+            "whole-brief-retained"
+          ]
         },
         {
           "text": "The studs may be missing weight information. Check that rather than guessing.",
-          "expects": ["unknown-preserved", "no-weight-inference"]
+          "expects": [
+            "unknown-preserved",
+            "no-weight-inference"
+          ]
         }
       ]
     },
@@ -139,41 +309,79 @@
       "id": "necklace-scope-education-resume",
       "family": "necklaces",
       "route": "/category/necklaces",
-      "tags": ["necklace-only-scope", "blog-detour", "resume"],
+      "tags": [
+        "necklace-only-scope",
+        "blog-detour",
+        "resume"
+      ],
       "turns": [
         {
           "text": "Find a pearl necklace for my mother, under $300. Sapphire is only required for the necklace if it comes up later.",
-          "expects": ["component-scope-recorded", "budget-recorded"]
+          "expects": [
+            "component-scope-recorded",
+            "budget-recorded"
+          ]
         },
-        { "text": "Compare two exact necklaces.", "expects": ["comparison-state"] },
+        {
+          "text": "Compare two exact necklaces.",
+          "expects": [
+            "comparison-state"
+          ]
+        },
         {
           "text": "Before deciding, what care question matters for pearls? Give me more detail.",
-          "expects": ["blog-evidence-or-gap", "comparison-retained"]
+          "expects": [
+            "blog-evidence-or-gap",
+            "comparison-retained"
+          ]
         },
-        { "text": "Back to those two.", "expects": ["same-identities-retained", "brief-retained"] }
+        {
+          "text": "Back to those two.",
+          "expects": [
+            "same-identities-retained",
+            "brief-retained"
+          ]
+        }
       ]
     },
     {
       "id": "ring-gift-compare-correction",
       "family": "rings",
       "route": "/category/rings",
-      "tags": ["gift", "compare", "correction", "unknown"],
+      "tags": [
+        "gift",
+        "compare",
+        "correction",
+        "unknown"
+      ],
       "turns": [
         {
           "text": "I need a ring gift for a friend, around $180, and she likes blue stones.",
-          "expects": ["gift-context", "approximate-budget"]
+          "expects": [
+            "gift-context",
+            "approximate-budget"
+          ]
         },
         {
           "text": "Show me options and save the two I mention.",
-          "expects": ["discovery-results", "saved-count-increases"]
+          "expects": [
+            "discovery-results",
+            "saved-count-increases"
+          ]
         },
         {
           "text": "Actually, the budget is strictly under $150. Compare the saved options again.",
-          "expects": ["strict-boundary", "comparison-refreshed"]
+          "expects": [
+            "strict-boundary",
+            "comparison-refreshed"
+          ]
         },
         {
           "text": "The second one, but cheaper.",
-          "expects": ["stable-reference-or-narrow-clarification", "brief-retained"]
+          "expects": [
+            "stable-reference-or-narrow-clarification",
+            "brief-retained"
+          ]
         }
       ]
     },
@@ -181,23 +389,39 @@
       "id": "ring-set-contents-unknown",
       "family": "rings",
       "route": "/category/rings",
-      "tags": ["looks", "set", "unknown", "downselect"],
+      "tags": [
+        "looks",
+        "set",
+        "unknown",
+        "downselect"
+      ],
       "turns": [
         {
           "text": "Help me compare a ring set with separate pieces for an anniversary gift.",
-          "expects": ["set-vs-separate-comparison"]
+          "expects": [
+            "set-vs-separate-comparison"
+          ]
         },
         {
           "text": "The set might not include the matching band. Verify its contents before calling it complete.",
-          "expects": ["unknown-set-contents", "no-complete-look-claim"]
+          "expects": [
+            "unknown-set-contents",
+            "no-complete-look-claim"
+          ]
         },
         {
           "text": "Use the separate ring as the anchor and show one feasible look.",
-          "expects": ["anchor-retained", "look-candidates"]
+          "expects": [
+            "anchor-retained",
+            "look-candidates"
+          ]
         },
         {
           "text": "Choose the stronger option and stop.",
-          "expects": ["recommendation-or-honest-gap", "stopping-respected"]
+          "expects": [
+            "recommendation-or-honest-gap",
+            "stopping-respected"
+          ]
         }
       ]
     },
@@ -205,25 +429,53 @@
       "id": "bracelet-five-saves-replacement",
       "family": "bracelets",
       "route": "/category/bracelets",
-      "tags": ["five-to-six-saves", "replacement", "looks", "budget"],
+      "tags": [
+        "five-to-six-saves",
+        "replacement",
+        "looks",
+        "budget"
+      ],
       "turns": [
         {
           "text": "Find a bracelet for a graduation gift, silver tone, under $220.",
-          "expects": ["gift-context", "budget-recorded"]
+          "expects": [
+            "gift-context",
+            "budget-recorded"
+          ]
         },
         {
           "text": "Show me at least five possibilities so I can save the ones I like.",
-          "expects": ["discovery-results", "saved-count-at-least-5"],
-          "uiActions": [{ "kind": "save-first", "count": 5 }]
+          "expects": [
+            "discovery-results",
+            "saved-count-at-least-5"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 5
+            }
+          ]
         },
         {
           "text": "Compare these two saved pieces and keep the best anchor.",
-          "expects": ["comparison-state", "anchor-retained"],
-          "beforeUiActions": [{ "kind": "compare-first-saved", "count": 2 }]
+          "expects": [
+            "comparison-state",
+            "anchor-retained"
+          ],
+          "beforeUiActions": [
+            {
+              "kind": "compare-first-saved",
+              "count": 2
+            }
+          ]
         },
         {
           "text": "Build a look, then replace the companion piece with something less expensive.",
-          "expects": ["look-candidates", "component-replacement", "budget-retained"]
+          "expects": [
+            "look-candidates",
+            "component-replacement",
+            "budget-retained"
+          ]
         }
       ]
     },
@@ -231,44 +483,80 @@
       "id": "bracelet-blog-care-detour",
       "family": "bracelets",
       "route": "/category/bracelets",
-      "tags": ["blog-detour", "unknown", "resume", "stop"],
+      "tags": [
+        "blog-detour",
+        "unknown",
+        "resume",
+        "stop"
+      ],
       "turns": [
         {
           "text": "I want a bracelet for everyday wear but I am unsure how to care for one with a pearl.",
-          "expects": ["education-needed", "mission-retained"]
+          "expects": [
+            "education-needed",
+            "mission-retained"
+          ]
         },
         {
           "text": "Answer the care question from the available guidance, then keep browsing.",
-          "expects": ["blog-evidence-or-gap", "discovery-results"]
+          "expects": [
+            "blog-evidence-or-gap",
+            "discovery-results"
+          ]
         },
         {
           "text": "If the product record does not establish treatment, leave that unknown.",
-          "expects": ["unknown-preserved", "no-unsupported-certainty"]
+          "expects": [
+            "unknown-preserved",
+            "no-unsupported-certainty"
+          ]
         },
-        { "text": "I have enough choices. Stop.", "expects": ["stopping-respected"] }
+        {
+          "text": "I have enough choices. Stop.",
+          "expects": [
+            "stopping-respected"
+          ]
+        }
       ]
     },
     {
       "id": "watch-gift-compare-downselect",
       "family": "watches",
       "route": "/category/watches",
-      "tags": ["gift", "compare", "downselect", "unknown"],
+      "tags": [
+        "gift",
+        "compare",
+        "downselect",
+        "unknown"
+      ],
       "turns": [
         {
           "text": "Find a watch gift for my dad, under $400, with a simple face.",
-          "expects": ["gift-context", "budget-recorded"]
+          "expects": [
+            "gift-context",
+            "budget-recorded"
+          ]
         },
         {
           "text": "Show me two meaningful alternatives and compare them.",
-          "expects": ["comparison-state", "tradeoff-explanation"]
+          "expects": [
+            "comparison-state",
+            "tradeoff-explanation"
+          ]
         },
         {
           "text": "Which one is better for the stated priorities? Keep the reason tied to the records.",
-          "expects": ["recommendation-or-honest-gap", "no-unsupported-certainty"]
+          "expects": [
+            "recommendation-or-honest-gap",
+            "no-unsupported-certainty"
+          ]
         },
         {
           "text": "Save the winner and stop showing more.",
-          "expects": ["saved-count-increases", "stopping-respected"]
+          "expects": [
+            "saved-count-increases",
+            "stopping-respected"
+          ]
         }
       ]
     },
@@ -276,23 +564,459 @@
       "id": "watch-look-replacement-stop",
       "family": "watches",
       "route": "/category/watches",
-      "tags": ["looks", "replacement", "unknown", "stop"],
+      "tags": [
+        "looks",
+        "replacement",
+        "unknown",
+        "stop"
+      ],
       "turns": [
         {
           "text": "I already like this watch. Find a complementary bracelet for a complete look under $500 total.",
-          "expects": ["liked-piece-anchor", "combined-budget"]
+          "expects": [
+            "liked-piece-anchor",
+            "combined-budget"
+          ]
         },
         {
           "text": "Keep the watch and replace the bracelet with a different material.",
-          "expects": ["anchor-retained", "component-replacement", "whole-brief-retained"]
+          "expects": [
+            "anchor-retained",
+            "component-replacement",
+            "whole-brief-retained"
+          ]
         },
         {
           "text": "If compatibility is not established, say so clearly and keep the item available for consideration.",
-          "expects": ["unknown-preserved", "no-complete-look-claim"]
+          "expects": [
+            "unknown-preserved",
+            "no-complete-look-claim"
+          ]
         },
         {
           "text": "That is the one. Stop.",
-          "expects": ["selection-retained", "stopping-respected"]
+          "expects": [
+            "selection-retained",
+            "stopping-respected"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e21-continuity-anniversary",
+      "family": "continuity",
+      "route": "/search",
+      "tags": [
+        "continuity",
+        "e21",
+        "anniversary",
+        "gift",
+        "five-to-six-saves",
+        "compare-downselect",
+        "correction",
+        "blog-detour",
+        "replacement",
+        "stop",
+        "unknown"
+      ],
+      "purpose": "E21 long continuity case: at least 22 shopper turns where the full scoped brief, accepted components and stable references survive with no repeated intake and no cumulative drift.",
+      "turns": [
+        {
+          "text": "Our tenth anniversary is coming up and I want to mark it with a piece of jewelry for my wife.",
+          "expects": [
+            "mission-recorded",
+            "gift-context"
+          ]
+        },
+        {
+          "text": "She wears white gold and loves sapphires. Please keep the whole budget at $900.",
+          "expects": [
+            "scoped-preferences",
+            "budget-recorded"
+          ]
+        },
+        {
+          "text": "Start with a ring and show me what you have.",
+          "expects": [
+            "discovery-results"
+          ]
+        },
+        {
+          "text": "Let me save several of these as we go.",
+          "expects": [
+            "discovery-results",
+            "saved-count-at-least-5"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "text": "One correction: sapphire matters most to her, diamonds would only be a bonus.",
+          "expects": [
+            "preference-strength-recorded",
+            "mission-retained"
+          ]
+        },
+        {
+          "text": "While you keep looking, how durable is a sapphire for everyday wear?",
+          "expects": [
+            "education-needed",
+            "blog-evidence-or-gap"
+          ]
+        },
+        {
+          "text": "Good, now back to finding the ring.",
+          "expects": [
+            "mission-retained",
+            "no-repeated-intake"
+          ]
+        },
+        {
+          "text": "Show me five fresh possibilities so I can add to my saved list.",
+          "expects": [
+            "discovery-results",
+            "saved-count-at-least-5"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "text": "I have my favorites saved. Put the first two side by side.",
+          "expects": [
+            "comparison-state"
+          ],
+          "beforeUiActions": [
+            {
+              "kind": "compare-first-saved",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "text": "Between these two, which one fits her taste better?",
+          "expects": [
+            "downselection-request",
+            "tradeoff-explanation"
+          ]
+        },
+        {
+          "text": "New information: the total spend has to stay strictly under $800, not $900.",
+          "expects": [
+            "strict-boundary",
+            "budget-retained"
+          ]
+        },
+        {
+          "text": "Set the pricier one aside and find me a similar ring that fits the tighter budget.",
+          "expects": [
+            "component-replacement",
+            "comparison-refreshed"
+          ]
+        },
+        {
+          "text": "Show those two rings together again under the new limit.",
+          "expects": [
+            "comparison-refreshed",
+            "same-identities-retained"
+          ]
+        },
+        {
+          "text": "What actually differs between the two sapphires in front of me?",
+          "expects": [
+            "tradeoff-explanation",
+            "no-unsupported-certainty"
+          ]
+        },
+        {
+          "text": "I should mention she is quite hard on her jewelry day to day.",
+          "expects": [
+            "wearability-context",
+            "mission-retained"
+          ]
+        },
+        {
+          "text": "Given everything I told you, which of the two would you stand behind?",
+          "expects": [
+            "recommendation-or-honest-gap",
+            "brief-retained"
+          ]
+        },
+        {
+          "text": "Good choice. Save that one for us.",
+          "expects": [
+            "saved-count-increases",
+            "stable-reference"
+          ]
+        },
+        {
+          "text": "Could we add matching earrings so it becomes a little set?",
+          "expects": [
+            "look-candidates",
+            "anchor-retained",
+            "combination-state"
+          ],
+          "uiActions": [
+            {
+              "kind": "combination-add-first",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "text": "Those earrings look heavy. Swap them for something lighter, like small studs.",
+          "expects": [
+            "component-replacement",
+            "anchor-retained",
+            "whole-brief-retained"
+          ]
+        },
+        {
+          "text": "Does the set truly include every piece shown? Please verify rather than assume.",
+          "expects": [
+            "unknown-set-contents",
+            "no-complete-look-claim"
+          ]
+        },
+        {
+          "text": "This is the one we want. We will go with the ring.",
+          "expects": [
+            "selection-retained",
+            "brief-retained"
+          ]
+        },
+        {
+          "text": "That covers it. Please stop showing me alternatives now.",
+          "expects": [
+            "stopping-respected",
+            "selection-retained"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage7-demo-gift-discovery",
+      "family": "demo",
+      "route": "/search",
+      "tags": [
+        "demo-story",
+        "mission-recorded",
+        "gift-context",
+        "scoped-preferences",
+        "budget-recorded",
+        "discovery-results",
+        "saved-count-at-least-5",
+        "comparison-state"
+      ],
+      "turns": [
+        {
+          "text": "Hi there. My mum turns 60 next month and I would love to find her a piece of jewelry she will actually wear.",
+          "expects": [
+            "mission-recorded",
+            "gift-context"
+          ]
+        },
+        {
+          "text": "I keep coming back to earrings for her, and everything together should stay at or under 200 dollars.",
+          "expects": [
+            "scoped-preferences",
+            "budget-recorded"
+          ]
+        },
+        {
+          "text": "Show me a good spread of styles so I can pick out the ones I like.",
+          "expects": [
+            "discovery-results",
+            "saved-count-at-least-5"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "text": "These three at the top feel like the strongest candidates. What really separates them?",
+          "expects": [
+            "comparison-state",
+            "tradeoff-explanation"
+          ],
+          "uiActions": [
+            {
+              "kind": "compare-first-saved",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "text": "Of those, the middle one keeps catching my eye. Would you stand behind it for her?",
+          "expects": [
+            "recommendation-or-honest-gap",
+            "brief-retained"
+          ]
+        },
+        {
+          "text": "Good, let's call that the one. No need to show me anything else today.",
+          "expects": [
+            "selection-retained",
+            "stopping-respected"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage7-demo-education-detour",
+      "family": "demo",
+      "route": "/search",
+      "tags": [
+        "demo-story",
+        "education-needed",
+        "mission-retained",
+        "blog-evidence-or-gap",
+        "discovery-results",
+        "budget-recorded",
+        "saved-count-increases",
+        "unknown-preserved"
+      ],
+      "turns": [
+        {
+          "text": "I have been trying to pick out something pearl for my aunt as a thank you gift, but I am honestly lost on the difference between the pearl types.",
+          "expects": [
+            "education-needed",
+            "mission-retained"
+          ]
+        },
+        {
+          "text": "Could you walk me through it simply? Just the parts that would actually change what I buy.",
+          "expects": [
+            "blog-evidence-or-gap"
+          ]
+        },
+        {
+          "text": "That helps. Now, could you show me some pearl pieces that could work for her? I would rather stay at 180 dollars or below.",
+          "expects": [
+            "discovery-results",
+            "budget-recorded"
+          ]
+        },
+        {
+          "text": "A few of these appeal to me. Let me hold onto them while I think.",
+          "expects": [
+            "discovery-results",
+            "saved-count-increases"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "text": "One thing: if a listing does not say whether a pearl has been treated, please leave that as unknown instead of filling it in.",
+          "expects": [
+            "unknown-preserved",
+            "no-unsupported-certainty"
+          ]
+        },
+        {
+          "text": "This has been genuinely useful. I have what I need, so you can stop there.",
+          "expects": [
+            "stopping-respected",
+            "mission-retained"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage7-demo-look-building",
+      "family": "demo",
+      "route": "/search",
+      "tags": [
+        "demo-story",
+        "mission-recorded",
+        "scoped-preferences",
+        "combined-budget",
+        "budget-recorded",
+        "provisional-anchor",
+        "saved-count-increases",
+        "look-candidates"
+      ],
+      "turns": [
+        {
+          "text": "I have a wedding to attend in a few weeks and I want a necklace with earrings that read as one considered look.",
+          "expects": [
+            "mission-recorded",
+            "scoped-preferences"
+          ]
+        },
+        {
+          "text": "For both pieces together I would like to keep the whole thing under 350 dollars.",
+          "expects": [
+            "combined-budget",
+            "budget-recorded"
+          ]
+        },
+        {
+          "text": "Let's begin with the necklace. That first style you showed feels right as the centre of the look, so I will keep it.",
+          "expects": [
+            "provisional-anchor",
+            "saved-count-increases"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "text": "Now what earrings would sit well with it?",
+          "expects": [
+            "look-candidates",
+            "anchor-retained"
+          ]
+        },
+        {
+          "text": "Two of those could work. I will hold them so I can weigh them against each other.",
+          "expects": [
+            "discovery-results",
+            "saved-count-increases"
+          ],
+          "uiActions": [
+            {
+              "kind": "save-first",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "text": "Put the first two saved pieces together as the set and show me what the total comes to.",
+          "expects": [
+            "look-candidates",
+            "combined-budget"
+          ],
+          "uiActions": [
+            {
+              "kind": "combination-add-first",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "text": "Yes, that combination works for me. That is all I need for today, so no more suggestions please.",
+          "expects": [
+            "selection-retained",
+            "stopping-respected"
+          ]
         }
       ]
     }

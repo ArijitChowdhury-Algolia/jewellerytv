@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
 // this campaign. No server, browser install, or paid call starts implicitly.
 export default defineConfig({
   testDir: '.',
-  testMatch: 'live.spec.ts',
+  testMatch: ['live.spec.ts', 'stage6-replacement-live.spec.ts'],
   fullyParallel: false,
   retries: 0,
   reporter: 'list',

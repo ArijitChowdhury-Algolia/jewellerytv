@@ -80,10 +80,15 @@ test('desktop window moves and resizes by pointer and keyboard, then restores fr
   expect(movedByPointer?.y).toBe((movedByKeyboard?.y ?? 0) + 20);
 
   const resize = panel.getByRole('button', { name: /resize concierge window/i });
-  await expect(resize).toHaveCSS('cursor', 'nwse-resize');
+  await expect(panel.locator('.concierge-header .concierge-window-resize')).toHaveCount(0);
+  await expect(panel.locator('.concierge-header .lucide-square')).toHaveCount(1);
+  expect(await resize.evaluate((element) => getComputedStyle(element).opacity)).toBe('0');
   const resizeBox = await resize.boundingBox();
   expect(resizeBox).not.toBeNull();
-  const resizeStart = { x: (resizeBox?.x ?? 0) + 20, y: (resizeBox?.y ?? 0) + 20 };
+  const resizeStart = {
+    x: (resizeBox?.x ?? 0) + (resizeBox?.width ?? 0) / 2,
+    y: (resizeBox?.y ?? 0) + (resizeBox?.height ?? 0) / 2,
+  };
   await page.mouse.move(resizeStart.x, resizeStart.y);
   await page.mouse.down();
   await page.mouse.move(resizeStart.x - 20, resizeStart.y - 20);
