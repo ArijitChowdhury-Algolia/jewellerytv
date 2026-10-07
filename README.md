@@ -32,6 +32,8 @@ The Concierge owns interpretation, tone, questions, search decisions, curation a
 
 The browser keeps the current shopping mission in session storage. Saved, Compare and manual Combination share that state. A new conversation keeps Saved while resetting the brief and working selection. The longer-term Saved/Compare session lifecycle has not been decided. Agent Studio memory is off, and there is no login or cross-device state.
 
+The app displays incoming Concierge text as it streams, then commits the answer and product cards only after a completed turn. Discover starts with one lead item for each validated product group. A shopper can reveal up to two more already selected items within that group; opening it does not make another catalogue request. Group counts follow the evidence, so two meaningful directions remain two.
+
 ## Run locally
 
 Use Node.js 24 and npm. Supply the server-side Algolia values and published Concierge agent ID in the project-root `.env.local` as described in [the environment template](storefront/.env.example). The two environment variables may name the same agent. Do not put credentials in `VITE_*` variables or Git.

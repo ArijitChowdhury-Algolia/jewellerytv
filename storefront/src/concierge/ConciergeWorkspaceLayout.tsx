@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Grip, Square, SquareStack } from 'lucide-react';
+import type { ReactNode, Ref, UIEventHandler } from 'react';
+import { Square, SquareStack } from 'lucide-react';
 import { useConciergeWindowControls } from './useConciergeWindowControls';
 import '../concierge-window-controls.css';
 import '../concierge-workspace.css';
@@ -10,13 +10,15 @@ export type ConciergeWorkspaceSection = 'conversation' | 'shopping';
 export interface ConciergeWorkspaceLayoutProps {
   /** Primary header controls such as New conversation. */
   headerActions: ReactNode;
-  /** Optional close control appears after the window control. */
+  /** Close action follows the single visible window control. */
   closeAction?: ReactNode;
   /** Compact Preferences trigger rendered in the same header row. */
   preferenceControls?: ReactNode;
   /** Expanded preference editor rendered above the conversation. */
   preferenceContent?: ReactNode;
   messages: ReactNode;
+  messagesViewportRef?: Ref<HTMLDivElement>;
+  onMessagesScroll?: UIEventHandler<HTMLDivElement>;
   status?: ReactNode;
   composer: ReactNode;
   productWorkspace: ReactNode;
@@ -37,6 +39,8 @@ export function ConciergeWorkspaceLayout({
   preferenceControls,
   preferenceContent,
   messages,
+  messagesViewportRef,
+  onMessagesScroll,
   status,
   composer,
   productWorkspace,
@@ -96,7 +100,9 @@ export function ConciergeWorkspaceLayout({
       <div className="concierge-workspace-body" data-section={section}>
         <section className="conversation-column" aria-label="Conversation">
           {preferenceContent && <div className="concierge-preferences">{preferenceContent}</div>}
-          <div className="concierge-messages">{messages}</div>
+          <div className="concierge-messages" ref={messagesViewportRef} onScroll={onMessagesScroll}>
+            {messages}
+          </div>
         </section>
         <section className="shopping-column" aria-label="Your shopping workspace">
           {productWorkspace}
@@ -111,12 +117,10 @@ export function ConciergeWorkspaceLayout({
         className="concierge-window-resize"
         aria-label="Resize Concierge window with arrow keys"
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-        title="Drag to resize or focus and use arrow keys"
+        title="Drag the corner to resize or focus and use arrow keys"
         onPointerDown={windowControls.beginResize}
         onKeyDown={windowControls.handleResizeKeyDown}
-      >
-        <Grip size={16} aria-hidden="true" />
-      </button>
+      />
     </aside>
   );
 }

@@ -15,6 +15,8 @@ export class CampaignLedger {
     this.firstFailures = new Map();
     this.stopped = false;
     this.stopReason = null;
+    this.defect = false;
+    this.retriedTurns = new Set();
   }
 
   assertRunning() {
@@ -28,6 +30,15 @@ export class CampaignLedger {
     this.turnKeys.add(key);
   }
 
+  /** A transport retry re-issues an existing shopper turn; it never creates a new one. */
+  startRetry(journeyId, turnId) {
+    this.assertRunning();
+    const key = `${journeyId}:${turnId}`;
+    if (!this.turnKeys.has(key)) throw new Error(`Retry has no shopper turn: ${key}`);
+    if (this.retriedTurns.has(key)) throw new Error(`Only one transport retry per turn: ${key}`);
+    this.retriedTurns.add(key);
+  }
+
   recordRequest(journeyId, turnId, kind, requestId) {
     this.assertRunning();
     if (!REQUEST_KINDS.has(kind) || !requestId)
@@ -38,8 +49,11 @@ export class CampaignLedger {
     this.requestIds.add(requestId);
     this.eventCounts[kind] += 1;
     if (this.requestIds.size > this.maximumCompletionRequests) {
-      this.stopForHarnessDefect('completion request budget exceeded');
-      throw new Error('Completion request budget exceeded.');
+      // A spent budget is a controlled campaign stop, not a harness defect. The
+      // remaining journeys stay unexecuted rather than misleadingly run.
+      this.stopped = true;
+      this.stopReason = 'completion request budget exceeded (remaining cases unexecuted)';
+      throw new Error('Completion request budget exceeded (remaining cases unexecuted).');
     }
   }
 
@@ -77,6 +91,7 @@ export class CampaignLedger {
   stopForHarnessDefect(reason) {
     this.stopped = true;
     this.stopReason = reason;
+    this.defect = true;
   }
 
   totals() {
@@ -87,6 +102,59 @@ export class CampaignLedger {
       maximumCompletionRequests: this.maximumCompletionRequests,
       stopped: this.stopped,
       stopReason: this.stopReason,
+      defect: this.defect,
     };
   }
+}
+
+/**
+ * Classify one observed /api/chat request within its shopper turn.
+ * priorBodies holds the request bodies observed earlier in the same turn.
+ * A byte-identical repeat body is a transport retry; a distinct body is a
+ * continuation of the same assistant response. Unreadable bodies cannot prove
+ * identity, so they stay continuations rather than guessed retries.
+ */
+export function classifyRequestKind(record, priorBodies) {
+  if (record.failed || (record.status !== null && record.status >= 400)) return 'failure';
+  if (!priorBodies.length) return 'completion';
+  if (record.body !== null && priorBodies.includes(record.body)) return 'retry';
+  return 'continuation';
+}
+
+/**
+ * Completion oracle for one shopper turn. An HTTP 200 (or any transport
+ * receipt) alone is never success. The turn completes only when ALL hold:
+ * a transport receipt exists; the completed-assistant storage delta (the
+ * jtv-concierge-completed-* set the app writes only after a clean finish)
+ * contains the EXACT latest assistant ID from the persisted transcript after
+ * the current shopper message; and a new assistant message is rendered in
+ * the visible rail. Returns 'completed' | 'completed-id-mismatch' |
+ * 'id-without-new-message' | 'no-completed-id' | 'stale-reply' | 'no-reply' |
+ * 'no-receipt'.
+ */
+export function evaluateTurnCompletion({
+  receiptSeen,
+  replyText,
+  previousReplyText,
+  latestTranscriptAssistantId,
+  completedAssistantIds,
+  previousCompletedAssistantIds,
+  newAssistantMessageRendered,
+}) {
+  if (!receiptSeen) return 'no-receipt';
+  const previous = new Set(previousCompletedAssistantIds ?? []);
+  const newCompletedIds = (completedAssistantIds ?? []).filter((id) => !previous.has(id));
+  const hasTranscriptId =
+    typeof latestTranscriptAssistantId === 'string' && !!latestTranscriptAssistantId;
+  if (!hasTranscriptId || !newCompletedIds.includes(latestTranscriptAssistantId)) {
+    if (newCompletedIds.length > 0) return 'completed-id-mismatch';
+    const replyIsStale =
+      previousReplyText !== null &&
+      previousReplyText !== undefined &&
+      replyText === previousReplyText;
+    return replyIsStale ? 'stale-reply' : 'no-completed-id';
+  }
+  if (typeof replyText !== 'string' || !replyText.trim()) return 'no-reply';
+  if (!newAssistantMessageRendered) return 'id-without-new-message';
+  return 'completed';
 }

@@ -52,25 +52,22 @@
 
 .concierge-window-resize {
   position: absolute;
-  right: 4px;
-  bottom: 4px;
+  right: 0;
+  bottom: 0;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: 0;
-  border-radius: 3px;
+  opacity: 0;
   background: transparent;
-  color: #24536a;
   cursor: nwse-resize;
   touch-action: none;
 }
 
 .concierge-window-resize:focus-visible {
-  outline: 2px solid #0076a9;
+  opacity: 1;
+  outline: 2px solid var(--blue);
   outline-offset: -3px;
 }
 
