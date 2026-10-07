@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Maximize2, Minimize2, MoveDiagonal2 } from 'lucide-react';
+import { Grip, Square, SquareStack } from 'lucide-react';
 import { useConciergeWindowControls } from './useConciergeWindowControls';
 import '../concierge-window-controls.css';
 import '../concierge-workspace.css';
@@ -8,8 +8,10 @@ import '../shopping-workspace.css';
 export type ConciergeWorkspaceSection = 'conversation' | 'shopping';
 
 export interface ConciergeWorkspaceLayoutProps {
-  /** Header controls such as New conversation and Close. */
+  /** Primary header controls such as New conversation. */
   headerActions: ReactNode;
+  /** Optional close control appears after the window control. */
+  closeAction?: ReactNode;
   /** Compact Preferences trigger rendered in the same header row. */
   preferenceControls?: ReactNode;
   /** Expanded preference editor rendered above the conversation. */
@@ -31,6 +33,7 @@ export interface ConciergeWorkspaceLayoutProps {
  */
 export function ConciergeWorkspaceLayout({
   headerActions,
+  closeAction,
   preferenceControls,
   preferenceContent,
   messages,
@@ -69,17 +72,6 @@ export function ConciergeWorkspaceLayout({
           {preferenceControls && <div className="brief-header-controls">{preferenceControls}</div>}
           <button
             type="button"
-            className="concierge-window-resize"
-            aria-label="Resize Concierge window with arrow keys"
-            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-            title="Drag to resize or focus and use arrow keys"
-            onPointerDown={windowControls.beginResize}
-            onKeyDown={windowControls.handleResizeKeyDown}
-          >
-            <MoveDiagonal2 size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
             className="concierge-window-maximize"
             aria-label={
               windowControls.maximized ? 'Restore Concierge window' : 'Maximize Concierge window'
@@ -88,11 +80,12 @@ export function ConciergeWorkspaceLayout({
             onClick={windowControls.toggleMaximized}
           >
             {windowControls.maximized ? (
-              <Minimize2 size={16} aria-hidden="true" />
+              <SquareStack size={16} aria-hidden="true" />
             ) : (
-              <Maximize2 size={16} aria-hidden="true" />
+              <Square size={16} aria-hidden="true" />
             )}
           </button>
+          {closeAction}
         </div>
       </header>
       {sectionSwitch && (
@@ -113,6 +106,17 @@ export function ConciergeWorkspaceLayout({
         {status}
         <div className="concierge-prompt">{composer}</div>
       </footer>
+      <button
+        type="button"
+        className="concierge-window-resize"
+        aria-label="Resize Concierge window with arrow keys"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+        title="Drag to resize or focus and use arrow keys"
+        onPointerDown={windowControls.beginResize}
+        onKeyDown={windowControls.handleResizeKeyDown}
+      >
+        <Grip size={16} aria-hidden="true" />
+      </button>
     </aside>
   );
 }

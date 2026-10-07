@@ -242,6 +242,9 @@
   display: flex;
   gap: 20px;
 }
+.connected-prompt-hint {
+  display: none;
+}
 .connected-prompt input {
   min-width: 0;
   flex: 1;
@@ -263,6 +266,23 @@
 .connected-prompt button:disabled {
   background: #b5c3c8;
   border-color: #b5c3c8;
+}
+@media (max-width: 767px) {
+  .connected-prompt input::placeholder {
+    font-size: 14px;
+  }
+}
+@media (max-width: 359px) {
+  .connected-prompt-hint {
+    display: block;
+    margin: 0 0 4px 12px;
+    color: #52636a;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .connected-prompt input::placeholder {
+    color: transparent;
+  }
 }
 .connected-products {
   padding: 22px 20px;
