@@ -608,32 +608,30 @@ export function ProductWorkspace({
                         </select>
                       </label>
                     )}
-                    <div className="pw-compare-actions">
-                      <div className="pw-actions">
-                        <button
-                          onClick={() => {
-                            setPreviewId(p.id);
-                            void s.refreshProducts([p.id]);
-                          }}
-                        >
-                          View details
-                        </button>
-                        <button
-                          onClick={() =>
-                            s.products.some((x) => x.product.id === p.id)
-                              ? s.remove(p.id)
-                              : s.pin(p.raw)
-                          }
-                        >
-                          {s.products.some((x) => x.product.id === p.id)
-                            ? 'Remove from saved'
-                            : 'Save piece'}
-                        </button>
-                      </div>
+                    <div className="pw-actions pw-compare-actions">
+                      <button
+                        onClick={() => {
+                          setPreviewId(p.id);
+                          void s.refreshProducts([p.id]);
+                        }}
+                      >
+                        View details
+                      </button>
+                      <button
+                        aria-pressed={s.products.some((x) => x.product.id === p.id)}
+                        onClick={() => workspaceSaveAction(s, p)}
+                      >
+                        {s.products.some((x) => x.product.id === p.id)
+                          ? 'Remove from saved'
+                          : 'Save'}
+                      </button>
                       <button
                         className="pw-compare-remove"
+                        aria-pressed={true}
                         onClick={() =>
-                          view === 'compare' ? s.toggleCompare(p.id) : s.toggleCombination(p.id)
+                          view === 'compare'
+                            ? workspaceCompareAction(s, p)
+                            : workspaceCombinationAction(s, p)
                         }
                       >
                         Remove from {view === 'compare' ? 'comparison' : 'combination'}
