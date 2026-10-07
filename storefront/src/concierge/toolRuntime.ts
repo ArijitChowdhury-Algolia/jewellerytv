@@ -37,6 +37,20 @@ type RuntimeOptions = {
   sessionStore?: ReturnType<typeof createSessionStore>;
 };
 
+type SemanticEvidenceAlias = {
+  evidenceRef: string;
+  source: EvidenceRecord['source'];
+  missionId: string;
+  stateRevision: number;
+  evidenceBatchRevision: number;
+  turnId: string;
+  generation: number;
+};
+
+function newSemanticAliasNonce() {
+  return globalThis.crypto.randomUUID().replaceAll('-', '').slice(0, 16);
+}
+
 function storedReceipts(value: unknown): OperationReceipt[] {
   if (value === undefined) return [];
   if (
@@ -159,6 +173,9 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
   let published: StagedPresentation | null = null;
   let publishedRecords: EvidenceRecord[] = [];
   let generation = 0;
+  let semanticAliasNonce = newSemanticAliasNonce();
+  let semanticAliasCounter = 0;
+  const semanticAliases = new Map<string, SemanticEvidenceAlias>();
   let presentationAttempted = false;
   const semanticUpdates = new Map<
     string,
@@ -190,6 +207,9 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
   const clearPending = () => {
     ledger = [];
     staged = null;
+    semanticAliases.clear();
+    semanticAliasCounter = 0;
+    semanticAliasNonce = newSemanticAliasNonce();
     batchRevision++;
   };
   function beginTurn(nextTurnId: string, shopperMessageId: string) {
@@ -266,19 +286,41 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
       return { status: 'invalid_input', reasons: ['semantic_input_invalid'] };
     presentationAttempted = true;
     if (!parsed.success) return { status: 'invalid_input', reasons: ['semantic_input_invalid'] };
+    const resolvedAliases = new Map<string, string>();
     const resolve = (line: z.infer<typeof semanticLine>) => {
+      const alias = semanticAliases.get(line.evidenceRef);
+      const canonicalRef =
+        alias &&
+        alias.source === 'prod_catalog' &&
+        alias.turnId === turnId &&
+        alias.missionId === session.missionId &&
+        alias.stateRevision === session.brief.revision &&
+        alias.evidenceBatchRevision === batchRevision &&
+        alias.generation === generation
+          ? alias.evidenceRef
+          : line.evidenceRef;
       const found = ledger.find(
         (entry) =>
-          entry.evidenceRef === line.evidenceRef &&
+          entry.evidenceRef === canonicalRef &&
           entry.source === 'prod_catalog' &&
           entry.turnId === turnId &&
           entry.missionId === session.missionId &&
           entry.stateRevision === session.brief.revision &&
           entry.evidenceBatchRevision === batchRevision,
       );
-      if (!found) throw new Error('unknown_or_stale_evidence');
-      return { ...line, objectID: found.objectID, contentHash: found.contentHash };
+      if (!found) {
+        invalidEvidenceRefs.push(line.evidenceRef.slice(0, 30));
+        throw new Error('unknown_or_stale_evidence');
+      }
+      if (alias) resolvedAliases.set(found.evidenceRef, line.evidenceRef);
+      return {
+        ...line,
+        evidenceRef: found.evidenceRef,
+        objectID: found.objectID,
+        contentHash: found.contentHash,
+      };
     };
+    const invalidEvidenceRefs: string[] = [];
     try {
       const body =
         parsed.data.kind === 'product_groups'
@@ -293,7 +335,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
                 lines: g.lines.map(resolve),
               })),
             };
-      return await present({
+      const result = await present({
         missionId: session.missionId,
         expectedStateRevision: session.brief.revision,
         expectedEvidenceBatchRevision: batchRevision,
@@ -301,8 +343,44 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
         proposalId: toolCallId,
         body,
       });
+      if (result.status !== 'staged' || !('proposal' in result)) {
+        if (
+          'basisFailure' in result &&
+          result.basisFailure &&
+          typeof result.basisFailure === 'object' &&
+          'evidenceRef' in result.basisFailure &&
+          typeof result.basisFailure.evidenceRef === 'string'
+        )
+          return {
+            ...result,
+            basisFailure: {
+              ...result.basisFailure,
+              evidenceRef:
+                resolvedAliases.get(result.basisFailure.evidenceRef) ??
+                result.basisFailure.evidenceRef,
+            },
+          };
+        return result;
+      }
+      return {
+        ...result,
+        proposal: {
+          ...result.proposal,
+          groups: result.proposal.groups.map((group) => ({
+            ...group,
+            lines: group.lines.map((line) => ({
+              ...line,
+              evidenceRef: resolvedAliases.get(line.evidenceRef) ?? line.evidenceRef,
+            })),
+          })),
+        },
+      };
     } catch {
-      return { status: 'invalid_evidence', reasons: ['unknown_or_stale_evidence'] };
+      return {
+        status: 'invalid_evidence',
+        reasons: ['unknown_or_stale_evidence'],
+        invalidEvidenceRefs: invalidEvidenceRefs.slice(0, 12),
+      };
     }
   }
   async function retrieveSemantic(
@@ -325,7 +403,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     if (signal?.aborted) return { status: 'aborted', evidenceBatchRevision: batchRevision };
     if (raw.source === 'blog' && (raw.target !== null || raw.exactObjectIDs))
       return { status: 'invalid_input', evidenceBatchRevision: batchRevision };
-    return retrieve(
+    const result = await retrieve(
       {
         source: raw.source,
         query: raw.query,
@@ -338,6 +416,21 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
       },
       signal,
     );
+    if (result.status !== 'ok' || !('records' in result)) return result;
+    const records = result.records.map((record) => {
+      const alias = `ev_${semanticAliasNonce}_${(semanticAliasCounter++).toString(36)}`;
+      semanticAliases.set(alias, {
+        evidenceRef: record.evidenceRef,
+        source: record.source,
+        missionId: result.missionId,
+        stateRevision: result.revision,
+        evidenceBatchRevision: result.evidenceBatchRevision,
+        turnId: result.turnId,
+        generation,
+      });
+      return { ...record, evidenceRef: alias };
+    });
+    return { ...result, records };
   }
   async function updateSemantic(
     raw: { operations: unknown[] },
@@ -366,9 +459,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
       return { status: 'invalid_input', failure: { code: 'NO_OPERATIONS' } };
     if (
       message.text.length > 2000 &&
-      raw.operations.some(
-        (operation) => (operation as Record<string, unknown>).sourceQuote == null,
-      )
+      raw.operations.some((operation) => (operation as Record<string, unknown>).sourceQuote == null)
     )
       return { status: 'invalid_input', failure: { code: 'SOURCE_QUOTE_REQUIRED' } };
     const payload = JSON.stringify(raw),

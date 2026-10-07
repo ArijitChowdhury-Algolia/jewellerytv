@@ -15,7 +15,7 @@ The current snapshot is incomplete. See the [Plan 3.1 handoff](docs/PLAN-3.1-STA
 | `src/ProductWorkspace.tsx` | Discover, Saved, Compare and Combination product views with visible prices and supported details. |
 | `tests/` and `evaluation/concierge-phases-1-3/` | Local regressions and a prepared but unaccepted live-journey scaffold. |
 
-The published `Concierge - Development` now serves the protected Vercel snapshot as well as the connected local path. Its tool names are `update_shopping_state`, `retrieve_evidence` and `present_choices`. The retained older Concierge and legacy Interpreter remain separate Agent Studio resources pending consumer checks. No product-index setting or record change is part of this application.
+The published `Concierge - Development` now serves the protected Vercel snapshot as well as the connected local path. Its tool names are `update_shopping_state`, `retrieve_evidence` and `present_choices`. The older Concierge and Interpreter have been removed after configuration backups and explicit confirmation. No product-index setting or record change is part of this application.
 
 ## Local run
 
