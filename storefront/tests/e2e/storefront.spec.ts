@@ -50,6 +50,7 @@ test('price and available size survive refresh and exact product return',async({
  const sizeAfter=await openFacet(page,'Ring Size');await expect(sizeAfter.locator('label').filter({has:page.locator('span',{hasText:new RegExp(`^${size}$`)})}).getByRole('checkbox')).toBeChecked();
  await page.locator('.results .product-link').first().click();
  await expect(page).toHaveURL(/\/product\/MFP256C/);await expect(page.locator('.product-info h1')).toContainText('DEW');
+ const productUrl=page.url();await page.goto(productUrl); // Direct load has no router return state.
  await page.getByRole('link',{name:'Back to results',exact:true}).click();await expect(page).toHaveURL(listingUrl);
  await page.locator('.results .product-link').first().click();await page.goBack();await expect(page).toHaveURL(listingUrl);
  expect(JSON.stringify(requests)).toContain('Pricing_PriceRange');expect(JSON.stringify(requests)).toContain('Inventory_AvailableSkuSizes');
@@ -77,7 +78,7 @@ test('concierge opens and resets without making a live model call',async({page})
  await page.goto('/category/rings');await expect(page.locator('.results .product-card')).toHaveCount(1);
  await page.getByRole('button',{name:'Open jewelry concierge'}).click();
  const panel=page.getByRole('complementary',{name:'Jewelry buying concierge'});await expect(panel).toBeVisible();
- await panel.getByRole('button',{name:'New conversation',exact:true}).click();
- await expect(panel.getByRole('heading',{name:'Find something you’ll love.'})).toBeVisible();
+ await panel.getByRole('button',{name:'Start a new conversation',exact:true}).click();
+ await expect(panel.getByRole('heading',{name:'Jewelry you’ll love. A little help finding it.'})).toBeVisible();
  expect(calls).toBe(0);await assertNoOverflow(page);
 });
