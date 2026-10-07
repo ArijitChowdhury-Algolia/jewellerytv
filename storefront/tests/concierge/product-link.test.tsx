@@ -13,16 +13,30 @@ const assistant = (text: string) => ({
 });
 
 describe('Concierge product identity links', () => {
-  it('renders an explicit PDP href safely and keeps normal target behavior', () => {
+  it('renders a verified PDP link for the embedded Concierge preview', () => {
     const html = renderToStaticMarkup(
       <ConversationMessage
         message={assistant('[Piece](/product/Ring%2FBlue)') as unknown as UIMessage}
         revealed
+        knownProductIds={new Set(['Ring/Blue'])}
+        verifiedProductIds={new Set(['Ring/Blue'])}
       />,
     );
     expect(html).toContain('href="/product/Ring%2FBlue"');
-    expect(html).toContain('target="_blank"');
-    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).not.toContain('target="_blank"');
+  });
+  it('renders an unverified model product URL as non-actionable text', () => {
+    const html = renderToStaticMarkup(
+      <ConversationMessage
+        message={assistant('[Unsupported piece](/product/unknown-1)') as unknown as UIMessage}
+        revealed
+        knownProductIds={new Set(['known-1'])}
+        verifiedProductIds={new Set(['known-1'])}
+      />,
+    );
+    expect(html).toContain('Unsupported piece');
+    expect(html).not.toContain('<a');
+    expect(html).not.toContain('href="/product/unknown-1"');
   });
   it('focuses only exact known verified IDs and rejects fuzzy or mismatched links', () => {
     const known = new Set(['ring-1']);

@@ -1,4 +1,11 @@
-import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useShopping, type PinnedProduct } from './ShoppingProvider';
 import { type Product } from './catalog';
 import { productURL } from './routing';
@@ -147,11 +154,15 @@ export function ProductWorkspace({
   onStart,
   model,
   focusProductId,
+  focusProductRequest,
+  onPreviewClose,
 }: {
   onAsk?: (text: string) => void;
   onStart?: () => void;
   model?: WorkspaceViewModel;
   focusProductId?: string | null;
+  focusProductRequest?: number;
+  onPreviewClose?: () => void;
 }) {
   const legacy = useShopping();
   const location = typeof window === 'undefined' ? { pathname: '/', search: '' } : window.location;
@@ -162,9 +173,10 @@ export function ProductWorkspace({
     if (!previewId || !raw) return;
     const exists =
       raw.products.some((p) => p.product.id === previewId) ||
+      raw.selectionRecords.some((p) => p.id === previewId) ||
       raw.discoveries.some((g) => g.items.some((i) => i.product.id === previewId));
     if (!exists) setPreviewId(null);
-  }, [previewId, raw?.products, raw?.discoveries]);
+  }, [previewId, raw?.products, raw?.selectionRecords, raw?.discoveries]);
   const displayBinding = legacy?.displayTrace;
   const displayCount = raw?.discoveries.reduce((n, g) => n + g.items.length, 0) ?? 0;
   useLayoutEffect(() => {
@@ -182,14 +194,13 @@ export function ProductWorkspace({
     };
   }, [displayBinding?.requestId, displayBinding?.revision, displayCount]);
   useEffect(() => {
-    if (!focusProductId || typeof document === 'undefined') return;
-    const target = document.querySelector<HTMLElement>(
-      `[data-product-id="${CSS.escape(focusProductId)}"]`,
-    );
-    if (!target) return;
-    target.scrollIntoView({ block: 'center' });
-    target.focus({ preventScroll: true });
-  }, [focusProductId, raw?.activeView]);
+    if (!focusProductId || !raw) return;
+    const exists =
+      raw.products.some((p) => p.product.id === focusProductId) ||
+      raw.selectionRecords.some((p) => p.id === focusProductId) ||
+      raw.discoveries.some((g) => g.items.some((i) => i.product.id === focusProductId));
+    if (exists) setPreviewId(focusProductId);
+  }, [focusProductId, focusProductRequest, raw?.products, raw?.selectionRecords, raw?.discoveries]);
   if (!raw) return null;
   // This view consumes the provider contract; the provider remains the sole state owner.
   const s = raw as ProductShopping;
@@ -205,6 +216,24 @@ export function ProductWorkspace({
     const product = byId.get(id);
     return product ? [{ product, quantity: s.combinationQuantities[id] ?? 1 }] : [];
   });
+  const comparisonValues =
+    view === 'compare'
+      ? selected.map(({ product }) => {
+          const facts = new Map<string, string>();
+          if (product.brand) facts.set('Brand', product.brand);
+          product.attributes.forEach((attribute) => {
+            if (attribute.value.trim()) facts.set(attribute.label, attribute.value);
+          });
+          return facts;
+        })
+      : [];
+  const comparisonLabels = Array.from(
+    new Set(comparisonValues.flatMap((facts) => [...facts.keys()])),
+  );
+  const comparisonFacts = comparisonLabels.map((label) => ({
+    label,
+    values: comparisonValues.map((facts) => facts.get(label) ?? null),
+  }));
   const missing = selectedIds.filter((id) => !byId.has(id)).length;
   const totals = pairTotal(selected.map((p) => ({ price: p.product.price, quantity: p.quantity })));
   const combinationCheck =
@@ -373,7 +402,14 @@ export function ProductWorkspace({
       )}
       {activePreview && (
         <section className="pw-preview" aria-label="Product preview">
-          <button onClick={() => setPreviewId(null)}>Back to choices</button>
+          <button
+            onClick={() => {
+              setPreviewId(null);
+              onPreviewClose?.();
+            }}
+          >
+            Back to choices
+          </button>
           <ProductImage
             product={byId.get(activePreview!)!}
             binding={imageBinding(byId.get(activePreview!)!)}
@@ -482,8 +518,18 @@ export function ProductWorkspace({
                   }
                 />
               </p>
-              <div className="pw-comparison" data-count={selected.length} data-view={view}>
-                {selected.map(({ product: p, quantity }) => (
+              <div
+                className="pw-comparison"
+                data-count={selected.length}
+                data-view={view}
+                style={
+                  {
+                    '--pw-comparison-row-count': 5 + comparisonFacts.length,
+                    '--pw-comparison-fact-count': comparisonFacts.length,
+                  } as CSSProperties
+                }
+              >
+                {selected.map(({ product: p, quantity }, productIndex) => (
                   <article className="pw-compare-product" key={p.id} data-product-id={p.id}>
                     <div className="pw-compare-image">
                       <ProductImage product={p} binding={imageBinding(p)} />
@@ -492,25 +538,16 @@ export function ProductWorkspace({
                     <Price product={p} />
                     <div className="pw-compare-assessment">{assessment(p)}</div>
                     {view === 'compare' ? (
-                      <dl className="pw-compare-attributes">
-                        {[
-                          ['Brand', p.brand],
-                          ...[
-                            'Material',
-                            'Material purity',
-                            'Gemstone shape',
-                            'Gemstone dimensions',
-                          ].map((label) => [
-                            label,
-                            p.attributes.find((a) => a.label === label)?.value,
-                          ]),
-                        ].map(([label, value]) => (
-                          <div key={label}>
-                            <dt>{label}</dt>
-                            <dd>{value || 'Not recorded'}</dd>
-                          </div>
-                        ))}
-                      </dl>
+                      comparisonFacts.length > 0 ? (
+                        <dl className="pw-compare-attributes">
+                          {comparisonFacts.map(({ label, values }) => (
+                            <div key={label}>
+                              <dt>{label}</dt>
+                              <dd>{values[productIndex] || 'Not recorded'}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null
                     ) : (
                       <label className="pw-quantity">
                         Quantity

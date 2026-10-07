@@ -232,8 +232,10 @@ test('connected refinements update Discover while preserving Saved and Compare',
     );
     const firstIds = (first.visible as { productIds: string[] }).productIds;
     if (first.newNotices) throw new Error('refinement-1 produced a system notice.');
-    if (firstIds.length < 2)
-      throw new Error(`refinement-1 displayed only ${firstIds.length} product cards.`);
+    if (firstIds.length !== 2)
+      throw new Error(
+        `refinement-1 requested two products but displayed ${firstIds.length} product cards.`,
+      );
     if (
       (first.returnedEvidenceIds as Array<{ source?: string }>).some(
         (record) => record.source !== 'prod_catalog',
@@ -300,6 +302,53 @@ test('connected refinements update Discover while preserving Saved and Compare',
       )
     )
       throw new Error('A product-only refinement returned evidence from another source.');
+
+    const productLink = panel.locator('.connected-assistant-message a[href^="/product/"]').first();
+    await expect(productLink).toHaveAttribute('href', `/product/${savedIds[0]}`);
+    const expectedPdpTitle = await page.evaluate(
+      ({ key, id }) => {
+        const value = sessionStorage.getItem(key);
+        const state = value ? JSON.parse(value) : null;
+        return state?.selectionRecords?.find(
+          (record: { objectID: string }) => record.objectID === id,
+        )?.raw?.Catalog_TitleDescription;
+      },
+      { key: V3_SESSION_KEY, id: savedIds[0] },
+    );
+    if (!expectedPdpTitle)
+      throw new Error('No evidence-bound title exists for the linked product.');
+    const currentUrl = page.url();
+    const openPagesBeforeLink = context.pages().length;
+    await productLink.click();
+    const preview = workspace.getByRole('region', { name: 'Product preview' });
+    await expect(preview).toBeVisible();
+    await expect(
+      preview.getByRole('heading', { name: expectedPdpTitle, exact: true }),
+    ).toBeVisible();
+    expect(page.url()).toBe(currentUrl);
+    expect(context.pages()).toHaveLength(openPagesBeforeLink);
+    await expect(workspace.locator('.pw-views button[aria-current="page"]')).toHaveText('Discover');
+    const stateWithPreview = await page.evaluate((key) => {
+      const value = sessionStorage.getItem(key);
+      return value ? JSON.parse(value) : null;
+    }, V3_SESSION_KEY);
+    expect(stateWithPreview?.compareIds).toEqual([savedIds[0]]);
+    expect(
+      stateWithPreview?.products.map((product: { objectID: string }) => product.objectID),
+    ).toEqual(savedIds);
+    uiActions.push({
+      action: 'open-verified-product-link-in-right-pane',
+      id: savedIds[0],
+      expectedPdpTitle,
+      urlUnchanged: page.url() === currentUrl,
+      newTabOpened: context.pages().length > openPagesBeforeLink,
+      activeView: 'discover',
+    });
+    await preview.getByRole('button', { name: 'Back to choices' }).click();
+    await expect(workspace.locator('.pw-discover .pw-product[data-product-id]')).toHaveCount(
+      secondIds.length,
+    );
+    await expect(workspace.locator('.pw-views button[aria-current="page"]')).toHaveText('Discover');
   } catch (error) {
     firstFailure = error instanceof Error ? error.message : String(error);
     evidence.firstFailure = firstFailure;

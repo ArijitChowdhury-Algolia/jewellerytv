@@ -84,6 +84,7 @@
 }
 .pw-product h3,
 .pw-compare-product h3 {
+  min-width: 0;
   font-size: 16px;
   line-height: 1.5;
   margin: 12px 0 8px;
@@ -138,11 +139,11 @@
 }
 .pw-comparison[data-view='compare'] {
   align-items: stretch;
-  grid-template-rows: repeat(10, auto);
+  grid-template-rows: repeat(var(--pw-comparison-row-count, 5), auto);
 }
 .pw-comparison[data-view='compare'] .pw-compare-product {
   display: grid;
-  grid-row: span 10;
+  grid-row: span var(--pw-comparison-row-count, 5);
   grid-template-rows: subgrid;
   min-width: 0;
 }
@@ -178,7 +179,7 @@
 }
 .pw-comparison[data-view='compare'] .pw-compare-attributes {
   display: grid;
-  grid-row: span 5;
+  grid-row: span var(--pw-comparison-fact-count, 0);
   grid-template-rows: subgrid;
   min-width: 0;
   margin: 0;
@@ -657,6 +658,30 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+.pw-saved .pw-product h3,
+.pw-saved .pw-product-copy > * {
+  min-width: 0;
+}
+.pw-saved .pw-product h3,
+.pw-saved .pw-product-copy > h3 {
+  overflow-wrap: anywhere;
+}
+.pw-saved .pw-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  align-items: stretch;
+}
+.pw-saved .pw-actions > button {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.pw-saved .pw-actions > .pw-combination-toggle {
+  grid-column: 1 / -1;
 }
 .pw-empty-brand {
   flex: 1;
