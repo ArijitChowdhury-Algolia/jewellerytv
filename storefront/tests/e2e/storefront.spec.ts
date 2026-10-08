@@ -151,7 +151,7 @@ test('concierge opens and resets without making a live model call', async ({ pag
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: 'Start a new conversation', exact: true }).click();
   await expect(
-    panel.getByRole('heading', { name: 'Jewelry you’ll love. A little help finding it.' }),
+    panel.getByRole('img', { name: 'JTV — Jewelry Television' }),
   ).toBeVisible();
   expect(calls).toBe(0);
   await assertNoOverflow(page);
