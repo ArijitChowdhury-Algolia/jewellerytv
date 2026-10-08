@@ -48,4 +48,4 @@ For a read-only configuration backup, run `npm run snapshot -- <agent-id>`. The 
 
 ## Deployment
 
-The public Vercel project has Git-triggered deployment disabled. An authorized snapshot needs a manual Vercel deployment and a valid `JTV_CONCIERGE_PRODUCTION_AGENT_ID` in the Production environment. Verify the served commit, unauthenticated access, `/api/health`, a read-only product request and an actual Concierge turn. Follow the [deployment guide](docs/deployment.md). A GitHub push and a Vercel build are separate events.
+The public Vercel project deploys automatically when `main` changes: `git.deploymentEnabled` in [vercel.json](storefront/vercel.json) enables the `main` branch only, and pushes to other branches do not deploy. A valid `JTV_CONCIERGE_PRODUCTION_AGENT_ID` must stay in the Production environment. Verify the served commit, unauthenticated access, `/api/health`, a read-only product request and an actual Concierge turn. Follow the [deployment guide](docs/deployment.md).
