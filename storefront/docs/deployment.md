@@ -6,7 +6,7 @@ This release is an explicitly requested snapshot of incomplete Plan 3.1 work. It
 
 ## Deployment boundary
 
-The JTV app is public: Vercel Authentication is disabled for this project, so visitors can open the production site without a Vercel account. Do not re-enable a deployment login unless Arijit explicitly requests it. `git.deploymentEnabled: false` in `vercel.json` keeps GitHub pushes from deploying automatically. Deploy manually only for an authorized release. The Vercel project root is `storefront`, Node.js is 24.x, the build is `npm run build`, output is `dist`, and the same Node API handler runs locally and as the Vercel function. Direct product, category and search routes are SPA rewrites.
+The JTV app is public: Vercel Authentication is disabled for this project, so visitors can open the production site without a Vercel account. Do not re-enable a deployment login unless Arijit explicitly requests it. Git-triggered deployment is enabled for `main` (`git.deploymentEnabled` in `vercel.json`, Arijit's decision of 8 October 2026); pushes to other branches do not deploy. Manual `vercel --prod` remains the fallback when Git integration is unavailable. The Vercel project root is `storefront`, Node.js is 24.x, the build is `npm run build`, output is `dist`, and the same Node API handler runs locally and as the Vercel function. Direct product, category and search routes are SPA rewrites.
 
 The customer `prod_catalog` and `blog` records and index settings are read-only. Deployment does not modify them or publish an Agent Studio prompt. Agent Studio configuration is administered separately in the signed-in dashboard.
 
@@ -20,9 +20,9 @@ Historic `BRIEF_V2_ENABLED`, `JTV_BRIEF_AGENT_ID`, `BRIEF_TURN_ROUTING_ENABLED`,
 
 1. Run `npm ci`, `npm run lint`, `npm run check:dependencies`, `npm run typecheck`, `npm test`, `npm run build` and Python evaluation unit tests from the intended checkout. Record `format:check` failures honestly.
 2. Review the intended outgoing Git tree and commits for credentials and private evidence. Push and verify GitHub CI for the exact commit SHA.
-3. Deploy that same checkout manually with `vercel --prod --scope algolia`. Record the deployment ID and production alias. A successful CLI command is not yet a verified site.
+3. Let the push to `main` trigger the Vercel production deployment, or deploy that same checkout manually with `vercel --prod --scope algolia` when Git integration is unavailable. Record the deployment ID and production alias. A successful build is not yet a verified site.
 4. In a fresh unauthenticated browser, check that both production aliases and the deployment URL return the app without redirecting to Vercel login. Verify `/api/health`, a read-only exact product request, served asset identity and one bounded Concierge request against the intended agent ID. The public `/api/chat` endpoint invokes the paid agent, so monitor usage as traffic grows.
-5. Confirm `git.deploymentEnabled: false` and `ssoProtection: null` after the deployment. Record any failure, including a successful build with an unconfigured or guardrail-blocked chat.
+5. Confirm `git.deploymentEnabled` enables `main` and `ssoProtection: null` after the deployment. Record any failure, including a successful build with an unconfigured or guardrail-blocked chat.
 
 Rollback: restore the prior deployment and its environment values. Deployment protection is a project setting, so rolling back code does not re-enable Vercel Authentication. Do not delete the older production Concierge until its consumer and rollback roles are disproven. Deleting it first would make a simple rollback of the prior app impossible. Preserve shopper state and private test evidence; never rewrite Git history as cleanup.
 
