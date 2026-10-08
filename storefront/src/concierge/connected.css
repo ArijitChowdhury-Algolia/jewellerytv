@@ -135,6 +135,12 @@
   font-weight: 700;
   text-wrap: balance;
 }
+.connected-welcome .connected-welcome-logo {
+  display: block;
+  width: clamp(180px, 55%, 260px);
+  height: auto;
+  margin: 0 auto;
+}
 .connected-message {
   max-width: 92%;
   margin: 0 0 13px;

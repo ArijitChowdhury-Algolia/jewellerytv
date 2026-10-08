@@ -761,10 +761,13 @@ export function ConnectedConcierge({
         <>
           {!visibleMessages.length && (
             <div className="connected-welcome">
-              <h2>
-                Jewelry you’ll love.
-                <br />A little help finding it.
-              </h2>
+              <img
+                className="connected-welcome-logo"
+                src="/assets/jtv-logo-full.png"
+                alt="JTV — Jewelry Television"
+                width="365"
+                height="273"
+              />
             </div>
           )}
           {visibleMessages.map((message, index) => (
