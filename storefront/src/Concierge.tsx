@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { ConnectedConcierge } from './concierge/ConnectedConcierge';
+import { trackConciergeVisibility } from './analytics';
 import './concierge-workspace.css';
 import './concierge/connected.css';
 
@@ -26,6 +27,7 @@ export const Concierge = forwardRef<
   const trigger = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
+    if (wasOpen.current !== open) trackConciergeVisibility(open);
     if (wasOpen.current && !open) opener.current?.focus();
     wasOpen.current = open;
   }, [open]);

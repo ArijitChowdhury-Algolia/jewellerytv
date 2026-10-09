@@ -24,6 +24,19 @@ The browser keeps the current shopping mission in session storage. Selected, Dis
 
 The app displays incoming Concierge text as it streams, then commits the answer and product cards only after a completed turn. Discover starts with one lead item for each validated product group. A shopper can reveal up to two more already selected items within that group; opening it does not make another catalogue request. Group counts follow the evidence, so two meaningful directions remain two.
 
+## Google Analytics
+
+The website installs one Google tag, `G-GVSHHN3EJQ`, in the shared HTML document head. Concierge visibility events reuse that tag: `concierge_open` and `concierge_close` contain only fixed widget labels. Conversation text, preferences and tool records are not supplied by these custom events. Analytics failures do not interrupt the widget.
+
+```mermaid
+flowchart LR
+  Page[Website page shell] --> Tag[One Google tag]
+  Widget[Concierge open and close] --> Tag
+  Tag --> GA[Google Analytics 4]
+```
+
+SPA history-based page views are controlled by the GA4 web stream's enhanced measurement. The application does not send a second manual route page-view event. Verify real event receipt in GA after release; local fixture tests establish wiring and deduplication only.
+
 ## Run locally
 
 Use Node.js 24 and npm. Supply the server-side Algolia values and published Concierge agent ID in the project-root `.env.local` as described in [the environment template](storefront/.env.example). The two environment variables may name the same agent. Do not put credentials in `VITE_*` variables or Git.
