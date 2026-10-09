@@ -39,8 +39,6 @@ const legacy = JSON.stringify({
   ],
   selectionRecords: [],
   compareIds: ['saved'],
-  combinationIds: ['saved'],
-  combinationQuantities: { saved: 2 },
 });
 describe('canonical session store', () => {
   it('keeps snapshot identity stable and notifies only after accepted transaction', async () => {

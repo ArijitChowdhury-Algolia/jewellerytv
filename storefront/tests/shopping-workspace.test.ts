@@ -23,11 +23,9 @@ it('keeps independent exclusions unless an exact replacement is confirmed',()=>{
  const state=newShoppingState();state.facts=[{id:'gold',field:'exclusion',value:'no yellow gold',quote:'no yellow gold',messageId:'u1',source:'user-confirmed',status:'confirmed'}];state.proposals=[{id:'heart',field:'exclusion',value:'no hearts',quote:'no hearts',messageId:'u2',status:'proposed'}];
  expect(acceptShoppingProposal(state,'heart').facts.map(f=>f.value)).toEqual(['no yellow gold','no hearts']);
 });
-it('keeps comparison choices separate from a purchase combination',()=>{
- const s=newShoppingState();s.compareIds=['a','b'];expect(s.combinationIds).toEqual([]);expect(s.combinationQuantities).toEqual({});
-});
-it('restores unsaved compared records without turning them into favourites',()=>{
+it('restores unsaved compared records without turning them into favourites or combination state',()=>{
  const s=newShoppingState();const p=pinRecord(s,record('a',15)).products[0].product;
  const restored=restoreShoppingState(JSON.stringify({...s,selectionRecords:[p],compareIds:['a'],combinationIds:['a'],combinationQuantities:{a:2}}));
- expect(restored.products).toEqual([]);expect(restored.compareIds).toEqual(['a']);expect(restored.combinationQuantities.a).toBe(2);
+ expect(restored.products).toEqual([]);expect(restored.compareIds).toEqual(['a']);
+ expect((restored as unknown as Record<string,unknown>).combinationIds).toBeUndefined();
 });

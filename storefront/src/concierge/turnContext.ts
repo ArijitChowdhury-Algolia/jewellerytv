@@ -49,10 +49,6 @@ export function buildTurnContext(
       ]),
     saved: session.products.map(({ objectID, quantity }) => [objectID, quantity]),
     compareIds: session.compareIds,
-    combination: session.combinationIds.map((objectID) => [
-      objectID,
-      session.combinationQuantities[objectID] ?? 1,
-    ]),
     currentGroups:
       session.activeView === 'discover'
         ? (session.committedProposal?.groups ?? []).map((group) => [

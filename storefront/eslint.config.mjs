@@ -9,7 +9,6 @@ export default tseslint.config(
       '**/archived/**',
       '**/runs/**',
       '**/evidence/**',
-      'shared/catalogueFacetValues.json',
       'src/catalog/fixtures.json',
       'dist/**',
       'node_modules/**',

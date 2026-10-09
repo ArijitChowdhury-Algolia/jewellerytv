@@ -43,8 +43,6 @@ const session = {
     evidenceRef: `prod_catalog/${record.objectID}/hash-${record.objectID}`,
   })),
   compareIds: records.map((record) => record.objectID),
-  combinationIds: [],
-  combinationQuantities: {},
   activeView: 'compare' as const,
   receipts: [],
   evidence: [],

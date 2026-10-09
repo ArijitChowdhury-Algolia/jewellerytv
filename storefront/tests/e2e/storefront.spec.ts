@@ -32,6 +32,13 @@ async function assertNoOverflow(page:Page){
 
 test.beforeEach(async({page})=>fixtureApi(page));
 
+test('demo diagnostics stay hidden unless explicitly requested',async({page})=>{
+ await page.goto('/');
+ await expect(page.getByText('Demo diagnostics',{exact:true})).toHaveCount(0);
+ await page.goto('/?debug=1');
+ await expect(page.getByText('Demo diagnostics',{exact:true})).toBeVisible();
+});
+
 test('price and available size survive refresh and exact product return',async({page})=>{
  const requests:Array<Record<string,unknown>>=[];
  page.on('request',request=>{if(request.url().endsWith('/api/search'))requests.push(request.postDataJSON());});
@@ -50,6 +57,7 @@ test('price and available size survive refresh and exact product return',async({
  const sizeAfter=await openFacet(page,'Ring Size');await expect(sizeAfter.locator('label').filter({has:page.locator('span',{hasText:new RegExp(`^${size}$`)})}).getByRole('checkbox')).toBeChecked();
  await page.locator('.results .product-link').first().click();
  await expect(page).toHaveURL(/\/product\/MFP256C/);await expect(page.locator('.product-info h1')).toContainText('DEW');
+ const productUrl=page.url();await page.goto(productUrl); // Direct load has no router return state.
  await page.getByRole('link',{name:'Back to results',exact:true}).click();await expect(page).toHaveURL(listingUrl);
  await page.locator('.results .product-link').first().click();await page.goBack();await expect(page).toHaveURL(listingUrl);
  expect(JSON.stringify(requests)).toContain('Pricing_PriceRange');expect(JSON.stringify(requests)).toContain('Inventory_AvailableSkuSizes');
@@ -77,7 +85,78 @@ test('concierge opens and resets without making a live model call',async({page})
  await page.goto('/category/rings');await expect(page.locator('.results .product-card')).toHaveCount(1);
  await page.getByRole('button',{name:'Open jewelry concierge'}).click();
  const panel=page.getByRole('complementary',{name:'Jewelry buying concierge'});await expect(panel).toBeVisible();
- await panel.getByRole('button',{name:'New conversation',exact:true}).click();
- await expect(panel.getByRole('heading',{name:'Find something you’ll love.'})).toBeVisible();
+ await panel.getByRole('button',{name:'Start a new conversation',exact:true}).click();
+ await expect(panel.getByRole('img',{name:'JTV — Jewelry Television'})).toBeVisible();
  expect(calls).toBe(0);await assertNoOverflow(page);
+});
+
+test('pending Concierge status animates inside the composer without a Stop control',async({page})=>{
+ await page.clock.install();
+ let releaseRequest!:()=>void;
+ await page.route('**/api/chat',async route=>{
+  await new Promise<void>(resolve=>{releaseRequest=resolve;});
+  await route.fulfill({status:500,json:{error:'Fixture request completed'}});
+ });
+ await page.goto('/category/rings');
+ await page.getByRole('button',{name:'Open jewelry concierge'}).click();
+ const panel=page.getByRole('complementary',{name:'Jewelry buying concierge'});
+ await panel.getByRole('textbox',{name:'Message the Concierge'}).fill('Find a simple necklace');
+ await panel.getByRole('button',{name:'Send',exact:true}).click();
+ await expect(panel.locator('.connected-progress-label')).toHaveText('Sending to Concierge');
+ await expect(panel.locator('.connected-progress-dot')).toHaveCount(3);
+ expect(await panel.locator('.connected-progress-dot').first().evaluate(el=>getComputedStyle(el).animationName)).toBe('concierge-status-pulse');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ expect(await panel.locator('.connected-progress-dot').first().evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await expect(panel.getByRole('textbox',{name:'Message the Concierge'})).toHaveAttribute('placeholder','');
+ await expect(panel.locator('.connected-status')).toHaveCount(0);
+ await expect(panel.getByRole('button',{name:'Stop',exact:true})).toHaveCount(0);
+ await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeDisabled();
+ await page.clock.fastForward(11_000);
+ await expect(panel.locator('.connected-progress-label')).toHaveText('Sending to Concierge');
+ await expect(panel.locator('.connected-progress-time')).toHaveText('11s');
+ await page.clock.fastForward(20_000);
+ await expect(panel.locator('.connected-progress-label')).toHaveText('Sending to Concierge');
+ await expect(panel.locator('.connected-progress-time')).toHaveText('31s');
+ releaseRequest();
+ await expect(panel.locator('.connected-progress')).toHaveCount(0);
+ await expect(panel.getByRole('textbox',{name:'Message the Concierge'})).toBeEnabled();
+ await expect(panel.getByRole('textbox',{name:'Message the Concierge'})).toHaveAttribute('placeholder','Shall we find something delighting?');
+});
+
+test('Concierge progress follows streamed tool and reply events',async({page})=>{
+ type ProgressWindow=Window&{emitProgress?:(event:unknown)=>void;closeProgress?:()=>void};
+ await page.addInitScript(()=>{
+  const originalFetch=window.fetch.bind(window);
+  window.fetch=(input,init)=>{
+   const raw=typeof input==='string'?input:input instanceof URL?input.href:input.url;
+   if(new URL(raw,location.href).pathname!=='/api/chat')return originalFetch(input,init);
+   const stream=new ReadableStream<Uint8Array>({start(controller){
+    (window as ProgressWindow).emitProgress=event=>controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
+    (window as ProgressWindow).closeProgress=()=>controller.close();
+   }});
+   return Promise.resolve(new Response(stream,{headers:{'content-type':'text/event-stream','x-vercel-ai-ui-message-stream':'v1'}}));
+  };
+ });
+ await page.goto('/');
+ await page.getByRole('button',{name:'Open jewelry concierge'}).click();
+ const panel=page.getByRole('complementary',{name:'Jewelry buying concierge'});
+ await panel.getByRole('textbox',{name:'Message the Concierge'}).fill('Find earrings');
+ await panel.getByRole('button',{name:'Send',exact:true}).click();
+ await page.evaluate(()=>{
+  (window as ProgressWindow).emitProgress?.({type:'start',messageId:'assistant-progress'});
+ });
+ await expect(panel.locator('.connected-progress-label')).toHaveText('Concierge is working');
+ await page.evaluate(()=>{
+  (window as ProgressWindow).emitProgress?.({type:'tool-input-start',toolName:'update_shopping_state',toolCallId:'call-progress'});
+ });
+ await expect(panel.locator('.connected-progress-label')).toHaveText('Updating preferences');
+ await page.evaluate(()=>{
+  const emit=(window as ProgressWindow).emitProgress;
+  emit?.({type:'text-start',id:'text-progress'});
+  emit?.({type:'text-delta',id:'text-progress',delta:'A useful thought.'});
+ });
+ await expect(panel.locator('.connected-progress-label')).toHaveText('Concierge is replying');
+ await expect(panel.locator('.connected-status')).toHaveCount(0);
+ await page.evaluate(()=>(window as ProgressWindow).closeProgress?.());
 });

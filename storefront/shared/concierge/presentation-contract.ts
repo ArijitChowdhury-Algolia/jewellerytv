@@ -19,6 +19,7 @@ export const CATALOGUE_GROUP_BASIS_ATTRIBUTES = [
   'Catalog_ProductType',
   'Catalog_RingType',
   'Catalog_EarringType',
+  'Catalog_BraceletType',
   'Catalog_NecklaceType',
   'Catalog_GemstoneInformation.GemstoneColorGroup',
 ] as const;
@@ -225,6 +226,7 @@ const CATALOGUE_GROUP_BASIS_LABELS: Record<CatalogueGroupBasis['attribute'], str
   Catalog_ProductType: 'Product type',
   Catalog_RingType: 'Ring style',
   Catalog_EarringType: 'Earring style',
+  Catalog_BraceletType: 'Bracelet style',
   Catalog_NecklaceType: 'Necklace style',
   'Catalog_GemstoneInformation.GemstoneColorGroup': 'Gemstone color',
 };

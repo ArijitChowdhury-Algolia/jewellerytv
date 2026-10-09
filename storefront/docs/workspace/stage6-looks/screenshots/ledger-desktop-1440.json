@@ -1,0 +1,108 @@
+{
+  "totals": {
+    "shopperTurns": 0,
+    "completionRequests": 0,
+    "events": {
+      "completion": 0,
+      "continuation": 0,
+      "retry": 0,
+      "failure": 0
+    },
+    "maximumCompletionRequests": 500,
+    "stopped": false,
+    "stopReason": null,
+    "defect": false
+  },
+  "assertions": {
+    "B1:saved-cards-present": {
+      "status": "pass",
+      "detail": "5 seeded fixture cards visible in Saved view"
+    },
+    "B1": {
+      "status": "fail",
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('complementary', { name: 'Jewelry buying Concierge' }).getByRole('region', { name: 'Shopping choices' }).locator('.pw-product[data-product-id]')\nExpected: \u001b[32m2\u001b[39m\nReceived: \u001b[31m0\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('complementary', { name: 'Jewelry buying Concierge' }).getByRole('region', { name: 'Shopping choices' }).locator('.pw-product[data-product-id]') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('complementary', { name: 'Jewelry buying Concierge' }).getByRole('region', { name: 'Shopping choices' }).locator('.pw-product[data-product-id]')\u001b[22m\n\u001b[2m    14 × locator resolved to 0 elements\u001b[22m\n\u001b[2m       - unexpected value \"0\"\u001b[22m\n"
+    },
+    "B2:combination-limit-guardrail": {
+      "status": "pass",
+      "detail": "fourth add disabled and limit status note visible after three accepted pieces"
+    },
+    "B3:failed-refresh-rollback": {
+      "status": "pass",
+      "detail": "saved card content identical after a failed refresh; prior information retained"
+    },
+    "P1:yellow-exclusion-conflict-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: MaterialColor Yellow conflicts with a Yellow exclusion"
+    },
+    "P1:missing-color-unknown-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: record without MaterialColor is unknown, never compliant"
+    },
+    "P1:white-record-passes-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: white-gold record matches a Yellow exclusion requirement set"
+    },
+    "P2:exact-cents-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: exact cent conversion with float-drift rejection"
+    },
+    "P2:boundary-operators-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: strict vs inclusive boundary and around never passes"
+    },
+    "P2:unknown-price-null-total-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: unknown price yields null total and counted unknowns, never a guess"
+    },
+    "P2:add-cents-null-fixture": {
+      "status": "pass",
+      "detail": "fixture proof: subtotal addition propagates unknowns"
+    },
+    "E07:agent-applies-remaining-budget": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    },
+    "E08:corrected-replacement-turn": {
+      "status": "blocked",
+      "detail": "B1: Claude 1 C4 yellow-gold exclusion fix pending"
+    },
+    "E10:agent-discloses-unknown": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    },
+    "E11:honest-infeasible-reply": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    },
+    "E13:conflict-claim-withholding": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    },
+    "E15:connected-refresh-rehydration": {
+      "status": "blocked",
+      "detail": "B2: Dev2 Stage 5 stability pending"
+    },
+    "E17:or-exclusion-connected-turn": {
+      "status": "blocked",
+      "detail": "B1: Claude 1 C4 yellow-gold exclusion fix pending"
+    },
+    "E24:native-adverse-injection": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    },
+    "E25:scoped-rejection-stop": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    },
+    "E26:selection-preservation-connected": {
+      "status": "blocked",
+      "detail": "B3: connected agent turn requires coordinated live run"
+    }
+  },
+  "screenshots": [
+    "/Users/arijitchowdhury/Dropbox/AI-Development/jewellerytv/storefront/docs/workspace/stage6-looks/screenshots/desktop-1440-b1-anchor-selection.png",
+    "/Users/arijitchowdhury/Dropbox/AI-Development/jewellerytv/storefront/docs/workspace/stage6-looks/screenshots/desktop-1440-b1-failure.png",
+    "/Users/arijitchowdhury/Dropbox/AI-Development/jewellerytv/storefront/docs/workspace/stage6-looks/screenshots/desktop-1440-b2-guardrail.png",
+    "/Users/arijitchowdhury/Dropbox/AI-Development/jewellerytv/storefront/docs/workspace/stage6-looks/screenshots/desktop-1440-b3-refresh-failure.png"
+  ]
+}

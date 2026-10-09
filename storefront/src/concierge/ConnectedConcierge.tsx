@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -8,12 +9,15 @@ import {
   type FormEvent,
   type MouseEvent,
   type ReactNode,
+  type UIEvent,
 } from 'react';
 import { useChat } from 'react-instantsearch';
 import type { ChatOnFinishCallback, UIMessage } from 'instantsearch.js/es/lib/ai-lite';
 import Markdown from 'markdown-to-jsx';
+import { X } from 'lucide-react';
 import { ShoppingWorkspace } from '../ShoppingWorkspace';
 import { ConciergeWorkspaceLayout } from './ConciergeWorkspaceLayout';
+import { ResponsiveAnswerTable } from './ResponsiveAnswerTable';
 import { ConnectedShoppingBrief } from './ConnectedShoppingBrief';
 import { createConciergeWorkspaceSession } from './ConciergeWorkspaceProvider';
 import { createSdkClientTools } from './sdkTools';
@@ -41,6 +45,36 @@ export function canSubmitConnectedTurn(
   blocked?: string,
 ) {
   return !!text.trim() && !pending && !resetting && !blocked;
+}
+
+/** Show only current-turn SDK activity; elapsed time is displayed separately. */
+export function connectedProgressLabel(
+  chatStatus: string,
+  messages: readonly UIMessage[],
+  sourceMessageId: string,
+) {
+  if (chatStatus === 'submitted') return 'Sending to Concierge';
+  const sourceIndex = messages.findIndex(
+    (message) => message.role === 'user' && message.id === sourceMessageId,
+  );
+  if (sourceIndex < 0) return 'Concierge is working';
+  const parts = messages
+    .slice(sourceIndex + 1)
+    .filter((message) => message.role === 'assistant')
+    .flatMap((message) => message.parts) as Array<{ type: string; state?: string; text?: string }>;
+  for (let index = parts.length - 1; index >= 0; index--) {
+    const part = parts[index];
+    if (part.type === 'text' && part.text?.trim()) return 'Concierge is replying';
+    if (!part.type.startsWith('tool-')) continue;
+    if (part.state === 'output-available' || part.state === 'output-error')
+      return 'Continuing your request';
+    if (part.state !== 'input-streaming' && part.state !== 'input-available') continue;
+    if (part.type === 'tool-update_shopping_state') return 'Updating preferences';
+    if (part.type === 'tool-retrieve_evidence') return 'Checking JTV information';
+    if (part.type === 'tool-present_choices') return 'Preparing product choices';
+    return 'Working with JTV information';
+  }
+  return 'Concierge is working';
 }
 
 /**
@@ -101,6 +135,27 @@ function messageText(message: UIMessage) {
     .map((part) => ('text' in part && typeof part.text === 'string' ? part.text : ''))
     .join('')
     .trim();
+}
+
+function displayTextParts(message: UIMessage) {
+  if (message.role === 'user') {
+    const text = messageText(message);
+    return text ? [text] : [];
+  }
+  const segments: string[] = [];
+  let current = '';
+  for (const part of message.parts) {
+    if (part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+      current += part.text;
+    } else if (current.trim()) {
+      segments.push(current);
+      current = '';
+    } else {
+      current = '';
+    }
+  }
+  if (current.trim()) segments.push(current);
+  return segments;
 }
 
 /** Persisted turns are shown after reload only when their final response is complete. */
@@ -211,6 +266,7 @@ export function getConnectedTurnSystemNotice(messages: readonly UIMessage[], fin
 export function ConversationMessage({
   message,
   revealed,
+  provisional = false,
   verifiedBlogUrls,
   knownProductIds = new Set<string>(),
   verifiedProductIds = new Set<string>(),
@@ -218,55 +274,70 @@ export function ConversationMessage({
 }: {
   message: UIMessage;
   revealed: boolean;
+  provisional?: boolean;
   verifiedBlogUrls?: ReadonlySet<string>;
   knownProductIds?: ReadonlySet<string>;
   verifiedProductIds?: ReadonlySet<string>;
   onProductLink?: (id: string, event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const text = messageText(message);
-  if (!text) return null;
+  const textParts = displayTextParts(message);
+  if (!textParts.length) return null;
   if (message.role === 'user')
-    return <p className="connected-message connected-user-message">{text}</p>;
-  if (!revealed) return null;
+    return <p className="connected-message connected-user-message">{textParts[0]}</p>;
+  if (!revealed && !provisional) return null;
   return (
-    <div className="connected-message connected-assistant-message connected-markdown">
+    <div
+      className={`connected-message connected-assistant-message${provisional ? ' connected-provisional' : ' connected-markdown'}`}
+      aria-live={provisional ? 'off' : undefined}
+    >
       <span className="connected-assistant-label" aria-hidden="true">
         Concierge
       </span>
-      <Markdown
-        options={{
-          disableParsingRawHTML: true,
-          overrides: {
-            a: {
-              component: ({ href, children }: { href?: string; children?: ReactNode }) => {
-                const productId = href?.match(/^\/product\/[^/?#]+$/)
-                  ? parseVerifiedProductLink(href, knownProductIds, verifiedProductIds)
-                  : null;
-                const productHref = productId ? href : null;
-                const articleHref = verifiedBlogHref(href, verifiedBlogUrls ?? new Set());
-                const safeHref = productHref ?? articleHref;
-                if (!safeHref) return <span>{children}</span>;
-                return (
-                  <a
-                    href={safeHref}
-                    target={productHref ? undefined : '_blank'}
-                    rel={productHref ? undefined : 'noopener noreferrer'}
-                    onClick={
-                      productId && onProductLink
-                        ? (event) => onProductLink(productId, event)
-                        : undefined
-                    }
-                  >
-                    {children}
-                  </a>
-                );
-              },
-            },
-          },
-        }}
-      >
-        {text}
-      </Markdown>
+      {textParts.map((text, index) => (
+        <div className="connected-assistant-text-part" key={`${message.id}-text-${index}`}>
+          {provisional ? (
+            text
+          ) : (
+            <Markdown
+              options={{
+                disableParsingRawHTML: true,
+                overrides: {
+                  table: {
+                    component: ResponsiveAnswerTable,
+                  },
+                  a: {
+                    component: ({ href, children }: { href?: string; children?: ReactNode }) => {
+                      const productId = href?.match(/^\/product\/[^/?#]+$/)
+                        ? parseVerifiedProductLink(href, knownProductIds, verifiedProductIds)
+                        : null;
+                      const productHref = productId ? href : null;
+                      const articleHref = verifiedBlogHref(href, verifiedBlogUrls ?? new Set());
+                      const safeHref = productHref ?? articleHref;
+                      if (!safeHref) return <span>{children}</span>;
+                      return (
+                        <a
+                          href={safeHref}
+                          target={productHref ? undefined : '_blank'}
+                          rel={productHref ? undefined : 'noopener noreferrer'}
+                          onClick={
+                            productId && onProductLink
+                              ? (event) => onProductLink(productId, event)
+                              : undefined
+                          }
+                        >
+                          {children}
+                        </a>
+                      );
+                    },
+                  },
+                },
+              }}
+            >
+              {text}
+            </Markdown>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -291,6 +362,7 @@ export function ConnectedConcierge({
   const resettingRef = useRef(false);
   const manualEditEpoch = useRef(0);
   const [pending, setPending] = useState<PendingTurn | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState('');
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
@@ -299,6 +371,23 @@ export function ConnectedConcierge({
   const [focusProductId, setFocusProductId] = useState<string | null>(null);
   const [focusProductRequest, setFocusProductRequest] = useState(0);
   const [briefControls, setBriefControls] = useState<HTMLDivElement | null>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const followTranscriptRef = useRef(true);
+  const onMessagesScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    const viewport = event.currentTarget;
+    followTranscriptRef.current =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
+  }, []);
+  const pendingTurnId = pending?.turnId;
+  useEffect(() => {
+    if (!pendingTurnId) return;
+    const startedAt = Date.now();
+    const timer = window.setInterval(
+      () => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [pendingTurnId]);
   const session = useMemo(
     () =>
       createConciergeWorkspaceSession({
@@ -314,6 +403,21 @@ export function ConnectedConcierge({
           });
           if (!response.ok) throw new Error('Evidence retrieval failed.');
           return (await response.json()) as RetrieveEvidenceResult;
+        },
+        fetchVocabulary: async () => {
+          const response = await fetch('/api/catalog-vocabulary');
+          if (!response.ok) throw new Error('Catalogue vocabulary unavailable.');
+          const payload = (await response.json()) as {
+            builtAt: string;
+            values: Record<string, string[]>;
+          };
+          return {
+            values: payload.values,
+            builtAt: payload.builtAt,
+            hasValue: (attribute, value) => (payload.values[attribute] ?? []).includes(value),
+            availableValues: (attribute) => payload.values[attribute] ?? [],
+            isFilterable: (attribute) => attribute in payload.values,
+          };
         },
       }),
     [],
@@ -481,6 +585,8 @@ export function ConnectedConcierge({
       runtime.beginTurn(turnId, sourceMessageId);
       setError('');
       setSystemNotices([]);
+      followTranscriptRef.current = true;
+      setElapsedSeconds(0);
       setPending({ sourceMessageId, turnId });
       chat.setInput('');
       try {
@@ -548,9 +654,6 @@ export function ConnectedConcierge({
     [blocked, chat, chatPersistenceOptions.id, onSystemNotice, pending, runtime],
   );
 
-  const stop = useCallback(() => {
-    void chat.stop();
-  }, [chat]);
   const startNewConversation = useCallback(async () => {
     if (resettingRef.current) return;
     const previousMissionId = chatPersistenceOptions.id;
@@ -590,16 +693,32 @@ export function ConnectedConcierge({
     setSection('conversation');
   }, [chat, chatPersistenceOptions.id, pending, runtime]);
   const visibleMessages = visibleConnectedTranscript(chat.messages, resetting);
+  const pendingSourceIndex = pending
+    ? visibleMessages.findIndex(
+        (message) => message.role === 'user' && message.id === pending.sourceMessageId,
+      )
+    : -1;
+  const pendingAssistantText =
+    pendingSourceIndex < 0
+      ? ''
+      : visibleMessages
+          .slice(pendingSourceIndex + 1)
+          .filter((message) => message.role === 'assistant')
+          .map(messageText)
+          .join('\n');
+  useLayoutEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (viewport && followTranscriptRef.current) viewport.scrollTop = viewport.scrollHeight;
+  }, [pendingAssistantText, visibleMessages.length, revealed, systemNotices.length]);
   const verifiedBlogUrls = useMemo(
     () =>
       canonicalBlogUrlsFromMessages(visibleMessages.filter((message) => revealed.has(message.id))),
     [visibleMessages, revealed],
   );
-  const status = pending
-    ? chat.status === 'submitted'
-      ? 'Sending to Concierge…'
-      : 'Concierge is considering your request…'
-    : blocked || error || '';
+  const pendingStatus = pending
+    ? connectedProgressLabel(chat.status, chat.messages, pending.sourceMessageId)
+    : '';
+  const status = pending ? '' : blocked || error || '';
 
   return (
     <ConciergeWorkspaceLayout
@@ -617,10 +736,12 @@ export function ConnectedConcierge({
             New
           </button>
           <div ref={setBriefControls} className="brief-header-controls" />
-          <button type="button" aria-label="Close Concierge" onClick={onClose}>
-            Close
-          </button>
         </>
+      }
+      closeAction={
+        <button type="button" aria-label="Close Concierge" title="Close" onClick={onClose}>
+          <X size={18} aria-hidden="true" />
+        </button>
       }
       preferenceContent={
         brief ? (
@@ -649,21 +770,32 @@ export function ConnectedConcierge({
         </>
       }
       section={section === 'products' ? 'shopping' : 'conversation'}
+      messagesViewportRef={messagesViewportRef}
+      onMessagesScroll={onMessagesScroll}
       messages={
         <>
           {!visibleMessages.length && (
             <div className="connected-welcome">
-              <h2>
-                Jewelry you’ll love.
-                <br />A little help finding it.
-              </h2>
+              <img
+                className="connected-welcome-logo"
+                src="/assets/jtv-logo-full.png"
+                alt="JTV — Jewelry Television"
+                width="365"
+                height="273"
+              />
             </div>
           )}
-          {visibleMessages.map((message) => (
+          {visibleMessages.map((message, index) => (
             <ConversationMessage
               key={message.id}
               message={message}
               revealed={revealed.has(message.id)}
+              provisional={
+                pendingSourceIndex >= 0 &&
+                index > pendingSourceIndex &&
+                message.role === 'assistant' &&
+                !revealed.has(message.id)
+              }
               knownProductIds={knownProductIds}
               verifiedProductIds={verifiedProductIds}
               verifiedBlogUrls={verifiedBlogUrls}
@@ -687,15 +819,31 @@ export function ConnectedConcierge({
       composer={
         <form className="connected-prompt" onSubmit={send}>
           <div className="connected-prompt-row">
-            <input
-              id="connected-concierge-input"
-              aria-label="Message the Concierge"
-              value={chat.input}
-              onChange={(event) => chat.setInput(event.currentTarget.value)}
-              disabled={!!pending || resetting || !!blocked}
-              placeholder="What are you looking for?"
-              autoComplete="off"
-            />
+            <div className="connected-prompt-field">
+              <input
+                id="connected-concierge-input"
+                aria-label="Message the Concierge"
+                aria-busy={!!pending}
+                value={chat.input}
+                onChange={(event) => chat.setInput(event.currentTarget.value)}
+                disabled={!!pending || resetting || !!blocked}
+                placeholder={pending ? '' : 'Shall we find something delighting?'}
+                autoComplete="off"
+              />
+              {pending && (
+                <span className="connected-progress" role="status" aria-live="polite">
+                  <span className="connected-progress-dots" aria-hidden="true">
+                    <span className="connected-progress-dot" />
+                    <span className="connected-progress-dot" />
+                    <span className="connected-progress-dot" />
+                  </span>
+                  <span className="connected-progress-label">{pendingStatus}</span>
+                  <span className="connected-progress-time" aria-hidden="true">
+                    {elapsedSeconds}s
+                  </span>
+                </span>
+              )}
+            </div>
             <button
               type="submit"
               disabled={!canSubmitConnectedTurn(chat.input, !!pending, resetting, blocked)}
@@ -703,11 +851,6 @@ export function ConnectedConcierge({
               Send
             </button>
           </div>
-          {pending && (
-            <button className="connected-stop" type="button" onClick={stop}>
-              Stop
-            </button>
-          )}
         </form>
       }
       productWorkspace={

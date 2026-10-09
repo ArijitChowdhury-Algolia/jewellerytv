@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { BRIEF_FIELDS } from './shopping.js';
 import { MONEY_OPERATORS, moneyOperatorLabel } from './moneyBounds.js';
-import { MATERIAL_ALTERNATIVE_PURITIES } from './concierge/catalogueFactContract.js';
 const id = z.string().min(1).max(300);
 export const briefValueSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), text: z.string().min(1).max(500) }).strict(),
@@ -121,13 +120,17 @@ const materialAlternativesValueSchema = z
       .array(
         z
           .object({
-            type: z.enum(['Gold', 'Silver']).nullable(),
-            color: z.enum(['White']).nullable(),
-            purity: z.enum(MATERIAL_ALTERNATIVE_PURITIES).nullable(),
+            // Free strings: the persisted schema stays tolerant of any material
+            // vocabulary the index may carry. Gate-keeping against the live
+            // vocabulary happens once, in the writer (updateShoppingState),
+            // which is the only path that creates these facts.
+            type: z.string().max(160).nullable(),
+            color: z.string().max(160).nullable(),
+            purity: z.string().max(160).nullable(),
             plating: z
               .object({
                 presence: z.enum(['required', 'forbidden']),
-                purity: z.enum(['Sterling']).nullable(),
+                purity: z.string().max(160).nullable(),
               })
               .strict()
               .nullable(),

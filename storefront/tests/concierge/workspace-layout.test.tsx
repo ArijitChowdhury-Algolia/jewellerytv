@@ -7,6 +7,7 @@ describe('approved Concierge workspace layout', () => {
     const html = renderToStaticMarkup(
       <ConciergeWorkspaceLayout
         headerActions={<button type="button">New conversation</button>}
+        closeAction={<button type="button" aria-label="Close Concierge">Close</button>}
         preferenceControls={<button type="button">Preferences</button>}
         preferenceContent={<div data-testid="preferences">Preference editor</div>}
         messages={<p>Assistant answer</p>}
@@ -28,6 +29,10 @@ describe('approved Concierge workspace layout', () => {
     );
     expect(html).toContain('class="concierge-panel concierge-workspace connected-concierge"');
     expect(html).toContain('class="concierge-header"');
+    const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
+    expect(header).toMatch(/New conversation[\s\S]*Preferences[\s\S]*Maximize Concierge window[\s\S]*Close Concierge/);
+    expect(header).not.toContain('concierge-window-resize');
+    expect(html).toContain('class="concierge-window-resize"');
     expect(html).toContain('class="brief-header-controls"');
     expect(html).toContain('data-testid="preferences"');
     expect(html).toContain('class="concierge-messages"');

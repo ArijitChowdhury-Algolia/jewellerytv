@@ -31,18 +31,12 @@ function workspace(view: WorkspaceViewModel['activeView'] = 'discover'): Workspa
     activeView: view,
     setView: vi.fn(),
     compareIds: view === 'compare' ? ['piece-1'] : [],
-    combinationIds: view === 'combination' ? ['piece-1'] : [],
-    combinationQuantities: { 'piece-1': 1 },
     toggleCompare: vi.fn(),
-    toggleCombination: vi.fn(),
     pin: vi.fn(),
     remove: vi.fn(),
-    setQuantity: vi.fn(),
     refreshProducts: vi.fn(async () => undefined),
     refreshing: false,
     refreshError: '',
-    budgetCents: null,
-    budgetScope: 'total',
   };
 }
 
@@ -93,22 +87,14 @@ describe('restored approved workspace composition', () => {
     expect(html).toContain('Discover');
     expect(html).toContain('Saved');
     expect(html).toContain('Compare');
-    expect(html).toContain('Combination');
     expect(html).toContain('Save');
-    expect(html).toContain('Compare');
-    expect(html).toContain('Add to combination');
+    expect(html).not.toContain('Add to combination');
   });
 
-  it('keeps saved, compare, and combination labels available for populated views', () => {
-    for (const view of ['saved', 'compare', 'combination'] as const) {
+  it('keeps saved and compare labels available for populated views', () => {
+    for (const view of ['saved', 'compare'] as const) {
       const html = renderToStaticMarkup(modal(view));
-      expect(html).toContain(
-        view === 'saved'
-          ? 'Remove from saved'
-          : view === 'compare'
-            ? 'Remove from comparison'
-            : 'Remove from combination',
-      );
+      expect(html).toContain(view === 'saved' ? 'Remove from saved' : 'Remove from comparison');
     }
   });
 

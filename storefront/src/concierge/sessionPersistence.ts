@@ -87,11 +87,6 @@ function migrateLegacy(value: Record<string, unknown>): PersistedSession | null 
       products,
       selectionRecords: [],
       compareIds: Array.isArray(value.compareIds) ? value.compareIds : [],
-      combinationIds: Array.isArray(value.combinationIds) ? value.combinationIds : [],
-      combinationQuantities:
-        value.combinationQuantities && typeof value.combinationQuantities === 'object'
-          ? value.combinationQuantities
-          : {},
       activeView: 'saved',
       receipts: [],
     }) as PersistedSession | null;
@@ -126,9 +121,7 @@ function parseV3(value: Record<string, unknown> | null): PersistedSession | null
       return input as string[];
     };
     const compareIds = normalizeIds(value.compareIds, 3);
-    const combinationIds = normalizeIds(value.combinationIds, 3);
-    if (!compareIds || !combinationIds) return null;
-    if (value.combinationQuantities !== undefined && (!value.combinationQuantities || typeof value.combinationQuantities !== 'object' || Array.isArray(value.combinationQuantities))) return null;
+    if (!compareIds) return null;
     const canonical = {
       version: 3,
       missionId: value.missionId,
@@ -136,14 +129,11 @@ function parseV3(value: Record<string, unknown> | null): PersistedSession | null
       products,
       selectionRecords,
       compareIds,
-      combinationIds,
-      combinationQuantities:
-        value.combinationQuantities && typeof value.combinationQuantities === 'object'
-          ? value.combinationQuantities
-          : {},
-      activeView: ['discover', 'saved', 'compare', 'combination'].includes(String(value.activeView))
-        ? value.activeView
-        : 'discover',
+      activeView: String(value.activeView) === 'combination'
+        ? 'saved'
+        : ['discover', 'saved', 'compare'].includes(String(value.activeView))
+          ? value.activeView
+          : 'discover',
       receipts: Array.isArray(value.receipts) ? value.receipts : [],
       ...(value.committedProposal &&
       typeof value.committedProposal === 'object' &&
@@ -202,8 +192,6 @@ export function createSessionPersistence(storage: StorageLike, initialMissionId?
                 products: [],
                 selectionRecords: [],
                 compareIds: [],
-                combinationIds: [],
-                combinationQuantities: {},
                 activeView: 'discover',
                 receipts: [],
               }) as PersistedSession | null)
@@ -275,8 +263,6 @@ export function createSessionPersistence(storage: StorageLike, initialMissionId?
           products: saved,
           selectionRecords: [],
           compareIds: [],
-          combinationIds: [],
-          combinationQuantities: {},
           activeView: 'discover',
           receipts: [],
           committedProposal: null,

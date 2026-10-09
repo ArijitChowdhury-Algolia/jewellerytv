@@ -46,8 +46,6 @@ const v1 = () =>
     ],
     selectionRecords: [],
     compareIds: ['saved-1'],
-    combinationIds: ['saved-1'],
-    combinationQuantities: { 'saved-1': 2 },
   });
 describe('v3 session contract RED gates', () => {
   it('migrates a pinned v1 Saved record without writes or invented evidence', () => {
@@ -93,8 +91,6 @@ describe('v3 session contract RED gates', () => {
     products: [],
     selectionRecords: [],
     compareIds: [],
-    combinationIds: [],
-    combinationQuantities: {},
     activeView: 'discover',
     receipts: [],
     committedProposal: null,
@@ -147,14 +143,12 @@ describe('v3 session contract RED gates', () => {
     combinedItemSubtotalCents: null,
     assessment: { perItem: 'accepted' as const, total: 'accepted' as const, reasons: [] },
   });
-  it('accepts unsaved evidence-bound selections for Compare and Combination', () => {
+  it('accepts unsaved evidence-bound selections for Compare', () => {
     const selected = boundProduct('selected-1');
     const parsed = validateConciergeSession({
       ...base(),
       selectionRecords: [selected],
       compareIds: ['selected-1'],
-      combinationIds: ['selected-1'],
-      combinationQuantities: { 'selected-1': 2 },
     });
     expect(parsed).not.toBeNull();
     expect(parsed?.products).toEqual([]);

@@ -331,6 +331,9 @@ describe('retrieve_evidence', () => {
     expect(search.mock.calls.at(-1)?.[0].filters).toEqual([
       { field: 'Catalog_ProductType', operator: 'eq', value: 'Necklace' },
     ]);
+    // Lowercase alias no longer fails at the wire schema (frozen enum removed);
+    // the compile gate still rejects it: the alias is neither an accepted item
+    // scope nor a mission product type, so retrieval fails closed regardless.
     expect(
       (
         await retrieve({
@@ -338,7 +341,7 @@ describe('retrieve_evidence', () => {
           target: { kind: 'item', itemKey: 'necklace', productType: 'necklace' },
         })
       ).status,
-    ).toBe('invalid_input');
+    ).toBe('unsupported_constraint');
     expect((await retrieve(productInput({ target: null }))).status).toBe('unsupported_constraint');
   });
   it('applies one accepted mission product type in a broad product search', async () => {
@@ -976,6 +979,31 @@ describe('retrieve_evidence', () => {
     });
     expect((await missing(productInput())).status).toBe('incomplete_evidence');
   });
+  it('never compiles an exclusion-field material fact with a non-none operator as an inclusion', async () => {
+    // Independent review finding (d): the writer rejects exclusion+any, but the
+    // compiler must reject it independently instead of compiling exclude:false.
+    const badFact = {
+      field: 'exclusion',
+      scope: { kind: 'mission', key: null },
+      value: {
+        kind: 'facet',
+        attribute: 'Catalog_MaterialInformation.MaterialColor',
+        values: ['Yellow'],
+        operator: 'any',
+      },
+    };
+    const retrieve = createEvidenceRetriever({
+      search: vi.fn().mockResolvedValue([]),
+      currentState: async () => state([ring, badFact]),
+    });
+    const response = await retrieve(productInput());
+    expect(response.status).toBe('unsupported_constraint');
+    expect(
+      (response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+        entry.reason.includes('Exclusion facts on material attributes require operator none'),
+      ),
+    ).toBe(true);
+  });
   it('compiles an exclusion-field material colour exclusion and excludes matching records', async () => {
     const exclusionFact = {
       field: 'exclusion',
@@ -1133,4 +1161,515 @@ describe('retrieve_evidence', () => {
       expect(untypedSearch).not.toHaveBeenCalled();
     },
   );
+
+  // Fit compiler red tests (STAGE3-FIT-COMPILER-REPAIR-PLAN-2026-10-07).
+  // The contract: a measurement fit fact compiles as POST-search verification
+  // against the returned record's Inventory_AvailableSkuSizeNames (numeric
+  // equality with the converted inches), never as an Algolia filter. Fail
+  // closed when the record lacks the field or does not contain the expected
+  // size. Unmapped units and product types outside the configured mapping stay
+  // unresolved before any search with an honest reason. These tests are red
+  // until the measurement branch lands in compile(); nothing here weakens
+  // exact identity, source binding or the read-only index boundary.
+  const fitFact = (patch: Record<string, unknown> = {}) => ({
+    field: 'fit',
+    scope: { kind: 'item', key: 'VG320P' },
+    value: {
+      kind: 'measurement',
+      value: 22,
+      unit: 'in',
+      component: 'chain length',
+      ...patch,
+    },
+  });
+  const vg320pTarget = { kind: 'item', itemKey: 'VG320P', productType: 'Necklace' };
+  const itemProductType = (productType: string) => ({
+    field: 'product_type',
+    scope: { kind: 'item', key: 'VG320P' },
+    value: { kind: 'facet', attribute: 'Catalog_ProductType', values: [productType], operator: 'any' },
+  });
+  const vg320pRecord = {
+    objectID: 'VG320P',
+    Catalog_ProductType: 'Necklace',
+    Inventory_AvailableSkuSizeNames: ['22 Inch'],
+  };
+
+  it('compiles an item-scoped 22 in fit as post-search verification and passes the exact record', async () => {
+    const search = vi.fn().mockResolvedValue([vg320pRecord]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () => state([itemProductType('Necklace'), fitFact()]),
+    });
+    const response = await retrieve(productInput({ target: vg320pTarget }));
+    expect(response.status, JSON.stringify(response.error)).toBe('ok');
+    expect(response.records.map((record) => record.objectID)).toEqual(['VG320P']);
+    // Verification runs after the search, not as a pre-search rejection.
+    expect(search).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed when the record lacks the size field or carries a different size', async () => {
+    const missing = createEvidenceRetriever({
+      search: async () => [
+        { objectID: 'VG320P', Catalog_ProductType: 'Necklace' },
+      ],
+      currentState: async () => state([itemProductType('Necklace'), fitFact()]),
+    });
+    const missingResponse = await missing(productInput({ target: vg320pTarget }));
+    expect(missingResponse.status).toBe('incomplete_evidence');
+
+    const wrongSize = createEvidenceRetriever({
+      search: async () => [
+        { ...vg320pRecord, Inventory_AvailableSkuSizeNames: ['20 Inch'] },
+      ],
+      currentState: async () => state([itemProductType('Necklace'), fitFact()]),
+    });
+    const wrongResponse = await wrongSize(productInput({ target: vg320pTarget }));
+    expect(wrongResponse.status).toBe('incomplete_evidence');
+    expect(
+      (wrongResponse as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+        entry.reason.toLowerCase().includes('size'),
+      ),
+    ).toBe(true);
+  });
+
+  it('still rejects an item-scoped fit retry that drops the required target', async () => {
+    const search = vi.fn().mockResolvedValue([vg320pRecord]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () => state([itemProductType('Necklace'), fitFact()]),
+    });
+    const response = await retrieve(productInput({ target: null }));
+    expect(response.status).not.toBe('ok');
+    expect(
+      (response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+        entry.reason.includes('Item-scoped hard requirement needs an explicit item target'),
+      ),
+    ).toBe(true);
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('keeps a non-necklace fit unresolved with an honest reason and no search', async () => {
+    const search = vi.fn().mockResolvedValue([vg320pRecord]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () => state([itemProductType('Bracelet'), fitFact()]),
+    });
+    const response = await retrieve(
+      productInput({ target: { kind: 'item', itemKey: 'VG320P', productType: 'Bracelet' } }),
+    );
+    // Bracelet target is accepted only because the brief carries an item-scoped
+    // product_type fact for it; the fit mapping is still not configured for it.
+    expect(response.status).toBe('unsupported_constraint');
+    expect(
+      (response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+        entry.reason.toLowerCase().includes('bracelet'),
+      ),
+    ).toBe(true);
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('keeps ring and unknown fit units out of scope with an honest reason and no search', async () => {
+    for (const unit of ['ring_us', 'ring_uk', 'unknown'] as const) {
+      const search = vi.fn().mockResolvedValue([vg320pRecord]);
+      const retrieve = createEvidenceRetriever({
+        search,
+        currentState: async () => state([itemProductType('Necklace'), fitFact({ value: 7, unit })]),
+      });
+      const response = await retrieve(productInput({ target: vg320pTarget }));
+      expect(response.status, `unit ${unit}`).toBe('unsupported_constraint');
+      expect(
+        (
+          response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+          entry.reason.toLowerCase().includes(unit === 'unknown' ? 'unknown' : unit),
+        ),
+        `unit ${unit} reason`,
+      ).toBe(true);
+      expect(search, `unit ${unit} must not search`).not.toHaveBeenCalled();
+    }
+  });
+
+  it('fails closed when multiple fit facts compile and any one expectation is unmet', async () => {
+    // Multi-fit hole (round-3 review): compile() collects every fit fact, so
+    // verification must require ALL of them, not just the first. Two fit
+    // expectations on the same target where the record only satisfies one is a
+    // verification failure, never a silent pass.
+    const search = vi.fn().mockResolvedValue([vg320pRecord]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        state([itemProductType('Necklace'), fitFact(), fitFact({ value: 20, unit: 'in' })]),
+    });
+    const response = await retrieve(productInput({ target: vg320pTarget }));
+    expect(response.status).toBe('incomplete_evidence');
+    expect(
+      (response as { unresolved?: Array<{ reason: string }> }).unresolved?.some((entry) =>
+        entry.reason.toLowerCase().includes('size'),
+      ),
+    ).toBe(true);
+    expect(response.records).toHaveLength(0);
+  });
+
+  it('converts cm and mm to inches by the recorded 2.54 cm rule and verifies numerically', async () => {
+    // 1 in = 2.54 cm exactly; 55.88 cm = 22 in. The expected size is verified
+    // against the record's own vocabulary (numeric equality), never invented
+    // as a filter.
+    const cm = createEvidenceRetriever({
+      search: vi.fn().mockResolvedValue([vg320pRecord]),
+      currentState: async () => state([itemProductType('Necklace'), fitFact({ value: 55.88, unit: 'cm' })]),
+    });
+    expect((await cm(productInput({ target: vg320pTarget }))).status).toBe('ok');
+
+    const mm = createEvidenceRetriever({
+      search: vi.fn().mockResolvedValue([vg320pRecord]),
+      currentState: async () => state([itemProductType('Necklace'), fitFact({ value: 558.8, unit: 'mm' })]),
+    });
+    expect((await mm(productInput({ target: vg320pTarget }))).status).toBe('ok');
+  });
+
+  // Water-resistance projection red test (Father's F2 finding, 2026-10-07):
+  // the evidence projection omitted Catalog_WaterResistanceRating (and
+  // Catalog_PreviouslyOwned, required by the Father's record-level oracle)
+  // even though the exact catalogue records carry them. The projection must
+  // pass those fields through when the record has them. Query-level
+  // attributesToRetrieve only; no index setting is touched.
+  it('projects water-resistance rating and previously-owned flags onto returned records', async () => {
+    const search = vi.fn().mockResolvedValue([
+      {
+        objectID: '1W9E1B',
+        Catalog_ProductType: 'Wrist Watch',
+        Catalog_WaterResistanceRating: '200 meters (20 ATM)',
+        Catalog_PreviouslyOwned: false,
+        Catalog_Condition: 'First Quality',
+        Inventory_InStock: true,
+        Pricing_ActivePrice: 161.09,
+      },
+    ]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () => state([ring]),
+    });
+    const response = await retrieve(productInput());
+    expect(response.status).toBe('ok');
+    // Product fields live under the evidence envelope's record wrapper.
+    const record = (response.records[0] as { record: Record<string, unknown> }).record;
+    expect(record.Catalog_WaterResistanceRating).toBe('200 meters (20 ATM)');
+    expect(record.Catalog_PreviouslyOwned).toBe(false);
+    // The projection must reach the outgoing query too: attributesToRetrieve is
+    // a per-query parameter derived from the same constant, never an index
+    // setting. Asserted through the Algolia adapter's injectable fetch, where
+    // the exact-lookup GET carries the list; the injected search mock above
+    // never sees it because the adapter applies it later.
+    const capturedUrls: string[] = [];
+    const adapter = createAlgoliaEvidenceSearch({
+      appId: 'TESTAPPID',
+      searchOnlyApiKey: 'search-only-key',
+      fetch: (async (input: RequestInfo | URL) => {
+        capturedUrls.push(String(input));
+        return new Response(JSON.stringify({ hits: [] }), { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    await adapter({
+      source: 'prod_catalog',
+      query: '',
+      count: 1,
+      exactObjectIDs: ['1W9E1B'],
+      filters: [],
+      signal: new AbortController().signal,
+    });
+    expect(capturedUrls.join(' ')).toContain('Catalog_WaterResistanceRating');
+    expect(capturedUrls.join(' ')).toContain('Catalog_PreviouslyOwned');
+  });
+});
+
+describe('retrieve_evidence with live catalog vocabulary', () => {
+  const liveVocabulary = {
+    values: {
+      'Catalog_ProductType': ['Bracelet', 'Earrings', 'Necklace', 'Ring'],
+      'Catalog_GemstoneInformation.GemstoneColorGroup': ['Blue', 'White'],
+      'Catalog_BandMaterialInformation.WatchBandMaterialName': ['Stainless Steel', 'Titanium'],
+    } as Record<string, string[]>,
+    builtAt: '2026-10-08T00:00:00.000Z',
+    hasValue: (attribute: string, value: string) =>
+      (liveVocabulary.values[attribute] ?? []).includes(value),
+    availableValues: (attribute: string) => liveVocabulary.values[attribute] ?? [],
+    isFilterable: (attribute: string) => attribute in liveVocabulary.values,
+  };
+  const vocabulary = {
+    get: async () => liveVocabulary,
+    invalidate: () => {},
+  };
+  const compileState = (facts: unknown[]) => state([ring, ...facts]);
+
+  it('compiles a product type filter from the live vocabulary', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () => compileState([]),
+      vocabulary,
+    });
+    const result = await retrieve(productInput({ target: null }));
+    expect(result.status).toBe('zero_hits');
+    expect(result.effectiveFilters).toEqual([
+      { field: 'Catalog_ProductType', operator: 'eq', value: 'Ring' },
+    ]);
+  });
+
+  it('returns requirement_unavailable with live alternatives when a value is absent', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        state([
+          {
+            field: 'product_type',
+            scope: { kind: 'mission', key: null },
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_ProductType',
+              values: ['Titanium Ring'],
+              operator: 'any',
+            },
+          },
+        ]),
+      vocabulary,
+    });
+    const result = await retrieve(productInput({ target: null }));
+    expect(result.status).toBe('requirement_unavailable');
+    expect(search).not.toHaveBeenCalled();
+    expect(result.unavailableRequirements).toEqual([
+      {
+        field: 'product_type',
+        attribute: 'Catalog_ProductType',
+        requested: ['Titanium Ring'],
+        availableValues: ['Bracelet', 'Earrings', 'Necklace', 'Ring'],
+      },
+    ]);
+    expect(result.unresolved).toEqual([]);
+  });
+
+  it('reports compiled filters alongside an unavailable requirement', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        state([
+          {
+            field: 'product_type',
+            scope: { kind: 'mission', key: null },
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_ProductType',
+              values: ['Titanium Ring'],
+              operator: 'any',
+            },
+          },
+          {
+            field: 'gemstone',
+            scope: { kind: 'mission', key: null },
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_GemstoneInformation.GemstoneColorGroup',
+              values: ['Blue'],
+              operator: 'any',
+            },
+          },
+        ]),
+      vocabulary,
+    });
+    const result = await retrieve(productInput({ target: null }));
+    expect(result.effectiveFilters).toEqual([
+      { field: 'Catalog_GemstoneInformation.GemstoneColorGroup', operator: 'eq', value: 'Blue' },
+    ]);
+  });
+
+  it('expands the watch band metal family from live vocabulary values', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        state([
+          {
+            field: 'product_type',
+            scope: { kind: 'mission', key: null },
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_ProductType',
+              values: ['Wrist Watch'],
+              operator: 'any',
+            },
+          },
+          {
+            field: 'watch_band_material',
+            scope: { kind: 'mission', key: null },
+            value: { kind: 'watch_band_family', family: 'metal' },
+          },
+        ]),
+      vocabulary,
+    });
+    const result = await retrieve(
+      productInput({ target: { kind: 'item', itemKey: 'Wrist Watch', productType: 'Wrist Watch' } }),
+    );
+    expect(result.effectiveFilters).toContainEqual({
+      field: 'Catalog_BandMaterialInformation.WatchBandMaterialName',
+      operator: 'in',
+      value: ['Stainless Steel', 'Titanium'],
+    });
+  });
+
+  it('keeps legacy behavior when no vocabulary is supplied', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () => compileState([]),
+    });
+    const result = await retrieve(productInput({ target: null }));
+    expect(result.status).toBe('zero_hits');
+    expect(result.effectiveFilters).toEqual([
+      { field: 'Catalog_ProductType', operator: 'eq', value: 'Ring' },
+    ]);
+  });
+});
+
+describe('ring size and platinum retrieval (live vocabulary era)', () => {
+  const sizedVocabulary = {
+    values: {
+      'Catalog_ProductType': ['Ring', 'Necklace', 'Earrings', 'Bracelet', 'Pendant', 'Wrist Watch'],
+      'Catalog_MaterialInformation.MaterialType': ['Gold', 'Silver', 'Platinum'],
+      'Catalog_MaterialInformation.MaterialPurity': ['Sterling', '14K', '18K', '950'],
+      'Inventory_AvailableSkuSizeNames': ['Size 6', 'Size 6.5', 'Size 7', 'Size 8', '16 Inch'],
+    } as Record<string, string[]>,
+    builtAt: '2026-10-08T00:00:00.000Z',
+    hasValue: (attribute: string, value: string) =>
+      (sizedVocabulary.values[attribute] ?? []).includes(value),
+    availableValues: (attribute: string) => sizedVocabulary.values[attribute] ?? [],
+    isFilterable: (attribute: string) => attribute in sizedVocabulary.values,
+  };
+  const vocabulary = { get: async () => sizedVocabulary, invalidate: () => {} };
+  const ev = { messageId: 'm', quote: 'explicit', explicit: true, verified: true };
+  const fact = (id: string, body: Record<string, unknown>) => ({
+    id,
+    status: 'active',
+    revision: 2,
+    createdAt: 'now',
+    origin: 'spoken',
+    certainty: 'explicit',
+    strength: 'requirement',
+    evidence: ev,
+    ...body,
+  });
+  const ringMission = (extra: Record<string, unknown>[]) => {
+    const parsed = briefStateV3Schema.safeParse({
+      version: 3,
+      missionId: 'mission-1',
+      revision: 2,
+      facts: [
+        fact('type', {
+          field: 'product_type',
+          scope: { kind: 'mission', key: null },
+          value: { kind: 'facet', attribute: 'Catalog_ProductType', values: ['Ring'], operator: 'any' },
+        }),
+        ...extra.map((body, index) => fact(`extra-${index}`, body)),
+      ],
+      processedTurns: [],
+      tombstones: [],
+      events: [],
+    });
+    if (!parsed.success) console.log('PARSE_FAIL', JSON.stringify(parsed.error.issues));
+    if (parsed.success) return parsed.data;
+    return briefStateV3Schema.parse({
+      version: 3,
+      missionId: 'mission-1',
+      revision: 2,
+      facts: [],
+      processedTurns: [],
+      tombstones: [],
+      events: [],
+    });
+  };
+
+  it('compiles a ring_us size fact and verifies it against record sizes', async () => {
+    const search = vi.fn().mockResolvedValue([
+      {
+        objectID: 'PCG074',
+        Catalog_ProductType: 'Ring',
+        Inventory_AvailableSkuSizeNames: ['Size 6', 'Size 7', 'Size 8', 'Size 9'],
+      },
+    ]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        ringMission([
+          {
+            field: 'fit',
+            scope: { kind: 'item', key: 'Ring' },
+            value: { kind: 'measurement', value: 6, unit: 'ring_us', component: 'ring' },
+          },
+        ]),
+      vocabulary,
+    });
+    const result = await retrieve(
+      productInput({ target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' } }),
+    );
+    expect(result.status).toBe('ok');
+    expect(result.records[0]?.objectID).toBe('PCG074');
+  });
+
+  it('marks a ring without the required size as incomplete evidence, not a crash', async () => {
+    const search = vi.fn().mockResolvedValue([
+      {
+        objectID: 'PCG072',
+        Catalog_ProductType: 'Ring',
+        Inventory_AvailableSkuSizeNames: ['Size 7', 'Size 8'],
+      },
+    ]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        ringMission([
+          {
+            field: 'fit',
+            scope: { kind: 'item', key: 'Ring' },
+            value: { kind: 'measurement', value: 6, unit: 'ring_us', component: 'ring' },
+          },
+        ]),
+      vocabulary,
+    });
+    const result = await retrieve(
+      productInput({ target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' } }),
+    );
+    expect(result.status).toBe('incomplete_evidence');
+    expect(result.unresolved.some((u) => u.field === 'fit')).toBe(true);
+  });
+
+  it('verifies a platinum material requirement against record material data', async () => {
+    const search = vi.fn().mockResolvedValue([
+      {
+        objectID: 'PCG074',
+        Catalog_ProductType: 'Ring',
+        Catalog_MaterialInformation: [
+          { MaterialType: 'Platinum', MaterialPurity: '950', MaterialColor: 'White' },
+        ],
+      },
+    ]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        ringMission([
+          {
+            field: 'material',
+            scope: { kind: 'mission', key: null },
+            value: {
+              kind: 'material_alternatives',
+              alternatives: [{ type: 'Platinum', color: null, purity: null, plating: null }],
+            },
+          },
+        ]),
+      vocabulary,
+    });
+    const result = await retrieve(
+      productInput({ target: { kind: 'item', itemKey: 'Ring', productType: 'Ring' } }),
+    );
+    expect(result.status).toBe('ok');
+    expect(result.records[0]?.objectID).toBe('PCG074');
+  });
 });

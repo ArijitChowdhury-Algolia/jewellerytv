@@ -39,8 +39,6 @@ const legacy = JSON.stringify({
   },
   products: [{ product: { raw: { objectID: 'saved' } }, quantity: 2 }],
   compareIds: ['saved'],
-  combinationIds: ['saved'],
-  combinationQuantities: { saved: 2 },
   selectionRecords: [{ objectID: 'saved' }],
 });
 describe('session persistence boundary', () => {
@@ -132,7 +130,6 @@ describe('session persistence boundary', () => {
     const again = p.commitMutation((state) => state);
     expect(again.ok).toBe(true);
     expect(JSON.parse(s.data.get(V3_SESSION_KEY)!).compareIds).toEqual(['saved']);
-    expect(JSON.parse(s.data.get(V3_SESSION_KEY)!).combinationQuantities).toEqual({ saved: 2 });
     expect(s.writes).toBe(writes);
   });
   it('preserves separate selection records, quantities, and undo history across canonical write and reload', () => {
@@ -145,8 +142,6 @@ describe('session persistence boundary', () => {
     seed.products = [{ ...product, objectID: 'saved', raw: { objectID: 'saved', title: 'Saved item' }, quantity: 2 }];
     seed.selectionRecords = [product];
     seed.compareIds = ['saved', 'working'];
-    seed.combinationIds = ['working'];
-    seed.combinationQuantities = { working: 3 };
     seed.brief.events = [{ turnId: 'undo-1', revision: 1, beforeFacts: [], beforeTombstones: [] }];
     s.data.set(V3_SESSION_KEY, JSON.stringify(seed));
     const p = createSessionPersistence(s);
@@ -155,7 +150,6 @@ describe('session persistence boundary', () => {
     expect(reloaded.products.map((item) => item.objectID)).toEqual(['saved']);
     expect(reloaded.selectionRecords.map((item) => item.objectID)).toEqual(['working']);
     expect(reloaded.compareIds).toEqual(['saved', 'working']);
-    expect(reloaded.combinationQuantities).toEqual({ working: 3 });
     expect(reloaded.brief.events).toEqual(seed.brief.events);
   });
   it('rolls back by reading the backup while leaving new v3 data intact', () => {
@@ -334,9 +328,7 @@ describe('session persistence boundary', () => {
     expect(next.brief.missionId).toBe('fresh-mission');
     expect(next.products).toHaveLength(1);
     expect(next.compareIds).toEqual([]);
-    expect(next.combinationIds).toEqual([]);
     expect(next.selectionRecords).toEqual([]);
-    expect(next.combinationQuantities).toEqual({});
   });
   it('does not overwrite a corrupt v3 record when starting a new mission', async () => {
     const s = new MemoryStorage();

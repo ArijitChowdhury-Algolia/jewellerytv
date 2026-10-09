@@ -168,6 +168,28 @@ describe('protected local API', () => {
       '/agent-studio/1/agents/development-agent/completions?stream=true&compatibilityMode=ai-sdk-5',
     );
   });
+  it('ends a broken chat stream with a generic error event instead of leaving partial text open', async () => {
+    const { request, upstream } = await setup();
+    upstream.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: {"type":"start"}\n\n'));
+            setTimeout(() => controller.error(new Error('private upstream detail')), 10);
+          },
+        }),
+        { headers: { 'content-type': 'text/event-stream' } },
+      ),
+    );
+    const response = await request('/api/chat', {
+      id: 'conversation-broken',
+      messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }],
+    });
+    const text = await response.text();
+    expect(text).toContain('"type":"error"');
+    expect(text).toContain('[DONE]');
+    expect(text).not.toContain('private upstream detail');
+  });
   it('rejects foreign Hosts, path traversal and control characters without calling upstream', async () => {
     const { request, upstream, url } = await setup();
     const status = await new Promise<number | undefined>((resolve) => {
@@ -349,5 +371,82 @@ describe('protected local API', () => {
     });
     expect(response.status).toBe(200);
     expect(String(upstream.mock.calls[0]?.[0])).toContain('/agents/published-agent/completions');
+  });
+});
+
+describe('upstream connection resilience', () => {
+  const chatBody = {
+    id: 'conversation-1',
+    messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }],
+  };
+  const sseResponse = () =>
+    new Response('data: {"type":"start"}\n\ndata: [DONE]\n\n', {
+      headers: { 'content-type': 'text/event-stream', 'x-vercel-ai-ui-message-stream': 'v1' },
+    });
+  const connectFailure = () => {
+    const error = new TypeError('fetch failed');
+    (error as TypeError & { cause?: unknown }).cause = Object.assign(
+      new Error('connection reset'), 
+      { code: 'ECONNRESET' },
+    );
+    return error;
+  };
+
+  it('retries a chat completion once when the upstream connection fails before any response', async () => {
+    const { request, upstream } = await setup();
+    upstream.mockRejectedValueOnce(connectFailure()).mockResolvedValueOnce(sseResponse());
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await request('/api/chat', chatBody);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain('[DONE]');
+      expect(upstream).toHaveBeenCalledTimes(2);
+      // The retry is visible, not silent.
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining('jtv_upstream_retry'),
+        expect.objectContaining({ path: expect.stringContaining('/completions') }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('still answers 502 when the upstream fails twice, logging the error cause', async () => {
+    const { request, upstream } = await setup();
+    upstream.mockRejectedValue(connectFailure());
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await request('/api/chat', chatBody);
+      expect(response.status).toBe(502);
+      expect(upstream).toHaveBeenCalledTimes(2);
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining('jtv_upstream_failure'),
+        expect.objectContaining({
+          path: expect.stringContaining('/completions'),
+          error: expect.objectContaining({ name: 'TypeError', code: 'ECONNRESET' }),
+        }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('does not retry when the client has already disconnected', async () => {
+    const { url, upstream } = await setup();
+    upstream.mockImplementation(
+      () => new Promise<Response>(() => {}), // hang the first upstream call
+    );
+    const controller = new AbortController();
+    const clientCall = fetch(`${url}/api/chat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(chatBody),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await vi.waitFor(() => expect(upstream).toHaveBeenCalledTimes(1));
+    controller.abort();
+    await clientCall;
+    await new Promise((r) => setTimeout(r, 50));
+    expect(upstream).toHaveBeenCalledTimes(1);
   });
 });

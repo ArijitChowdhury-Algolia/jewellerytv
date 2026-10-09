@@ -69,6 +69,7 @@
   padding-bottom: 20px;
 }
 .pw-image {
+  position: relative;
   aspect-ratio: 1;
   background: #fff;
   display: grid;
@@ -78,6 +79,8 @@
   color: var(--muted);
 }
 .pw-image img {
+  position: absolute;
+  inset: 0;
   height: 100%;
   width: 100%;
   object-fit: contain;
@@ -228,22 +231,6 @@
   clear: both;
   padding-top: 12px;
   margin-bottom: 8px;
-}
-.pw-quantity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: space-between;
-  margin: 16px 0;
-  font-size: 13px;
-}
-.pw-quantity select {
-  min-height: 44px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--text);
-  width: 70px;
 }
 .pw-footnote {
   font-size: 12px;
@@ -432,7 +419,7 @@
 }
 .pw-discovery-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: 20px 16px;
 }
 .pw-proposed-looks {
@@ -512,6 +499,7 @@
   .pw-group-items:has(> .pw-product:nth-child(2))
   .pw-product-copy {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 10px;
 }
@@ -680,8 +668,110 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.pw-saved .pw-actions > .pw-combination-toggle {
-  grid-column: 1 / -1;
+
+/* Narrow multi-card shelves keep all three actions inside each card. */
+.product-workspace
+  .pw-discovery-groups[data-group-count='1']
+  .pw-group-items:has(> .pw-product:nth-child(2))
+  .pw-actions,
+.product-workspace .pw-proposed-looks .pw-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(44px, auto);
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+.product-workspace
+  .pw-discovery-groups[data-group-count='1']
+  .pw-group-items:has(> .pw-product:nth-child(2))
+  .pw-actions
+  > button,
+.product-workspace .pw-proposed-looks .pw-actions > button {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.product-workspace
+  .pw-discovery-groups[data-group-count='1']
+  .pw-group-items:has(> .pw-product:nth-child(2))
+  .pw-actions
+/* Show one clear lead for each catalogue-backed style, then disclose its
+   already validated variations within the same column. */
+.pw-discovery-groups:not([data-group-count='1']) .pw-group-items > .pw-product {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pw-discovery-groups:not([data-group-count='1']) .pw-group-items > .pw-product .pw-image-button {
+  width: 100%;
+}
+.pw-discovery-groups:not([data-group-count='1']) .pw-group-items > .pw-product .pw-image {
+  aspect-ratio: auto;
+  block-size: clamp(135px, 18cqw, 185px);
+}
+.pw-discovery-groups:not([data-group-count='1']) .pw-group-items > .pw-product .pw-product-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.product-workspace .pw-discovery-groups:not([data-group-count='1']) .pw-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+.product-workspace .pw-discovery-groups:not([data-group-count='1']) .pw-actions > button {
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.product-workspace
+  .pw-discovery-groups:not([data-group-count='1'])
+  .pw-actions
+.product-workspace .pw-style-toggle {
+  align-self: flex-start;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  border-radius: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pw-style-toggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.pw-style-variations {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.pw-style-variations[hidden] {
+  display: none;
+}
+.pw-discovery-groups:not([data-group-count='1']) .pw-style-variations .pw-product {
+  grid-template-columns: minmax(0, 72px) minmax(0, 1fr);
+}
+.pw-discovery-groups:not([data-group-count='1']) .pw-style-variations .pw-image {
+  aspect-ratio: 1;
+}
+.pw-proposed-looks .pw-product-copy {
+  flex: 1;
 }
 .pw-empty-brand {
   flex: 1;
@@ -727,10 +817,14 @@
   border-bottom: 0;
   padding-bottom: 0;
 }
+.pw-discovery-groups[data-group-count='1'] .pw-group-items:has(> .pw-product:only-child) .pw-image {
+  aspect-ratio: auto;
+  block-size: clamp(220px, 34cqw, 350px);
+}
 .pw-discovery-groups[data-group-count='1']
   .pw-group-items:has(> .pw-product:nth-child(2))
   .pw-image {
-  block-size: clamp(220px, 34cqw, 350px);
+  block-size: clamp(180px, 28cqw, 300px);
 }
 .pw-empty-brand p {
   font-size: clamp(16px, 1.7vw, 20px);

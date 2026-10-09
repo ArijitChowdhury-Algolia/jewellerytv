@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Maximize2, Minimize2, MoveDiagonal2 } from 'lucide-react';
+import type { ReactNode, Ref, UIEventHandler } from 'react';
+import { Square, SquareStack } from 'lucide-react';
 import { useConciergeWindowControls } from './useConciergeWindowControls';
 import '../concierge-window-controls.css';
 import '../concierge-workspace.css';
@@ -8,13 +8,17 @@ import '../shopping-workspace.css';
 export type ConciergeWorkspaceSection = 'conversation' | 'shopping';
 
 export interface ConciergeWorkspaceLayoutProps {
-  /** Header controls such as New conversation and Close. */
+  /** Primary header controls such as New conversation. */
   headerActions: ReactNode;
+  /** Close action follows the single visible window control. */
+  closeAction?: ReactNode;
   /** Compact Preferences trigger rendered in the same header row. */
   preferenceControls?: ReactNode;
   /** Expanded preference editor rendered above the conversation. */
   preferenceContent?: ReactNode;
   messages: ReactNode;
+  messagesViewportRef?: Ref<HTMLDivElement>;
+  onMessagesScroll?: UIEventHandler<HTMLDivElement>;
   status?: ReactNode;
   composer: ReactNode;
   productWorkspace: ReactNode;
@@ -31,9 +35,12 @@ export interface ConciergeWorkspaceLayoutProps {
  */
 export function ConciergeWorkspaceLayout({
   headerActions,
+  closeAction,
   preferenceControls,
   preferenceContent,
   messages,
+  messagesViewportRef,
+  onMessagesScroll,
   status,
   composer,
   productWorkspace,
@@ -69,17 +76,6 @@ export function ConciergeWorkspaceLayout({
           {preferenceControls && <div className="brief-header-controls">{preferenceControls}</div>}
           <button
             type="button"
-            className="concierge-window-resize"
-            aria-label="Resize Concierge window with arrow keys"
-            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-            title="Drag to resize or focus and use arrow keys"
-            onPointerDown={windowControls.beginResize}
-            onKeyDown={windowControls.handleResizeKeyDown}
-          >
-            <MoveDiagonal2 size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
             className="concierge-window-maximize"
             aria-label={
               windowControls.maximized ? 'Restore Concierge window' : 'Maximize Concierge window'
@@ -88,11 +84,12 @@ export function ConciergeWorkspaceLayout({
             onClick={windowControls.toggleMaximized}
           >
             {windowControls.maximized ? (
-              <Minimize2 size={16} aria-hidden="true" />
+              <SquareStack size={16} aria-hidden="true" />
             ) : (
-              <Maximize2 size={16} aria-hidden="true" />
+              <Square size={16} aria-hidden="true" />
             )}
           </button>
+          {closeAction}
         </div>
       </header>
       {sectionSwitch && (
@@ -103,7 +100,9 @@ export function ConciergeWorkspaceLayout({
       <div className="concierge-workspace-body" data-section={section}>
         <section className="conversation-column" aria-label="Conversation">
           {preferenceContent && <div className="concierge-preferences">{preferenceContent}</div>}
-          <div className="concierge-messages">{messages}</div>
+          <div className="concierge-messages" ref={messagesViewportRef} onScroll={onMessagesScroll}>
+            {messages}
+          </div>
         </section>
         <section className="shopping-column" aria-label="Your shopping workspace">
           {productWorkspace}
@@ -113,6 +112,15 @@ export function ConciergeWorkspaceLayout({
         {status}
         <div className="concierge-prompt">{composer}</div>
       </footer>
+      <button
+        type="button"
+        className="concierge-window-resize"
+        aria-label="Resize Concierge window with arrow keys"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+        title="Drag the corner to resize or focus and use arrow keys"
+        onPointerDown={windowControls.beginResize}
+        onKeyDown={windowControls.handleResizeKeyDown}
+      />
     </aside>
   );
 }

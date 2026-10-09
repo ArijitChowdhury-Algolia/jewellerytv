@@ -38,6 +38,20 @@ async function setup() {
     productionAgentId: 'production-agent',
     environment: 'development',
     fetch: upstream,
+    // Warm-cache injection: in production the vocabulary scan runs once at
+    // cold start; this test asserts on the search request that follows it.
+    vocabulary: {
+      get: async () => ({
+        values: { 'Catalog_ProductType': ['Ring'] },
+        builtAt: '2026-10-08T00:00:00.000Z',
+        hasValue: (attribute: string, value: string) =>
+          attribute === 'Catalog_ProductType' && value === 'Ring',
+        availableValues: (attribute: string) =>
+          attribute === 'Catalog_ProductType' ? ['Ring'] : [],
+        isFilterable: (attribute: string) => attribute === 'Catalog_ProductType',
+      }),
+      invalidate: () => {},
+    },
   });
   servers.push(server);
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));

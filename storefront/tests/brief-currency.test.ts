@@ -3,11 +3,7 @@
 import { expect, it } from 'vitest';
 import { createBriefState, applyBriefOperations } from '../shared/briefState';
 import { formatBriefValue } from '../shared/briefSchema';
-import {
-  compileBriefConstraints,
-  checkBriefConflicts,
-  checkCombinationBudget,
-} from '../shared/briefConstraints';
+import { compileBriefConstraints as compileBriefConstraintsBase, checkBriefConflicts as checkBriefConflictsBase } from '../shared/briefConstraints';
 import { newShoppingState, withBrief } from '../src/ShoppingProvider';
 const foreign = {
   id: 'gbp',
@@ -48,12 +44,11 @@ it('retains stated GBP while withholding USD numeric filters', () => {
   expect(compiled.context[0].reason).toContain('currency');
   expect(compiled.consultationBrief).toContain('GBP');
 });
-it('leaves individual and combination affordability unknown without a currency conversion', () => {
+it('leaves affordability unknown without a currency conversion', () => {
   const s = state();
   expect(checkBriefConflicts(s, { objectID: 'usd-item', Pricing_ActivePrice: 10 }).status).toBe(
     'unknown',
   );
-  expect(checkCombinationBudget(s, [{ price: 10 }]).status).toBe('unknown');
 });
 it('does not display a GBP number as a USD workspace limit', () => {
   const shopping = withBrief(newShoppingState(), state());
@@ -87,3 +82,17 @@ it('formats USD compatibly while preserving a different explicit currency', () =
   expect(formatBriefValue({ ...foreign.value, currency: 'USD' })).toBe('Up to $150.00 total');
   expect(formatBriefValue(foreign.value)).toBe('Up to GBP 150.00 total');
 });
+
+// Fixture live vocabulary (values observed by read-only index interrogation;
+// the runtime receives them from /api/catalog-vocabulary). The frozen JSON
+// fallback these tests previously relied on is retired.
+const testVocabValues:Readonly<Record<string,readonly string[]>>={
+ 'Catalog_ProductType':['Ring','Earrings','Necklace','Bracelet','Pendant','Wrist Watch'],
+ 'Catalog_JewelryMaterialNavigationName':['Silver','Gold','Platinum'],
+ 'Catalog_JewelryMaterialNavigationColor':['White','Yellow','Rose'],
+ 'Catalog_GemstoneInformation.GemstoneShape':['Round','Heart','Flower'],
+ 'Catalog_GemstoneInformation.GemstoneColorGroup':['Blue','White','Red'],
+ 'Catalog_EarringType':['Stud'],
+};
+const compileBriefConstraints=(...args:Parameters<typeof compileBriefConstraintsBase>)=>compileBriefConstraintsBase(args[0],args[1],testVocabValues);
+const checkBriefConflicts=(...args:Parameters<typeof checkBriefConflictsBase>)=>checkBriefConflictsBase(args[0],args[1],testVocabValues);

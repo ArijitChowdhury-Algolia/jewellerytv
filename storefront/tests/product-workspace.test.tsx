@@ -4,7 +4,7 @@
  * - Keep a shared row when one product has a value and mark only the other as unrecorded.
  * - Use normalized catalogue fields rather than a fixed attribute checklist.
  */
-// Distinct view contracts: comparison isn't a basket; combination arithmetic is explicit; images are real records.
+// Distinct view contracts: comparison isn't a basket; images are real records.
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { it, expect, vi } from 'vitest';
@@ -61,19 +61,13 @@ function state(view: string) {
     displayIntro: '',
     activeView: view,
     compareIds: ['a', 'b'],
-    combinationIds: ['a', 'b'],
-    combinationQuantities: { a: 1, b: 1 },
-    budgetCents: 15000,
-    budgetScope: 'total',
     refreshing: false,
     refreshError: '',
     setView: vi.fn(),
     refreshProducts: vi.fn(),
     toggleCompare: vi.fn(),
-    toggleCombination: vi.fn(),
     pin: vi.fn(),
     remove: vi.fn(),
-    setQuantity: vi.fn(),
   };
 }
 it('omits comparison fields that are missing from every selected product', () => {
@@ -122,13 +116,6 @@ it('shows a missing value only when another compared product supplies that field
   expect(html).not.toContain('Gemstone shape');
   expect(html).not.toContain('Gemstone dimensions');
 });
-it('calculates subtotal only for explicit combination selections', () => {
-  mock.state = state('combination');
-  const html = renderToStaticMarkup(<ProductWorkspace />);
-  expect(html).toContain('$149.98');
-  expect(html).toContain('$0.02');
-  expect(html).toContain('Quantity');
-});
 it('renders curated descriptions safely without literal markdown delimiters', () => {
   mock.state = {
     ...state('discover'),
@@ -141,17 +128,6 @@ it('renders curated descriptions safely without literal markdown delimiters', ()
   expect(html).not.toContain('<script>');
 });
 
-it('shows the exact per-item boundary conflict in combination view', () => {
-  mock.state = {
-    ...state('combination'),
-    brief: budgetBrief(9499, 'lt', 'per-item'),
-    budgetCents: 9499,
-    budgetScope: 'per-item',
-  };
-  const html = renderToStaticMarkup(<ProductWorkspace />);
-  expect(html).toContain('An item conflicts with under $94.99 per item');
-  expect(html).not.toContain('remains before other charges');
-});
 it('shows foreign-budget uncertainty without turning an inclusive USD boundary into a violation', () => {
   const foreign: BriefFactInput = {
     id: 'foreign',
@@ -164,14 +140,14 @@ it('shows foreign-budget uncertainty without turning an inclusive USD boundary i
     evidence: { messageId: 'foreign', quote: 'GBP budget', explicit: true, verified: true },
   };
   mock.state = {
-    ...state('combination'),
+    ...state('compare'),
     brief: budgetBrief(14998, 'lte', 'total', [foreign]),
-    budgetCents: 14998,
   };
   const html = renderToStaticMarkup(<ProductWorkspace />);
-  expect(html).toContain('Budget currency GBP has no verified USD conversion');
+  expect(html).toContain('Under GBP 100.00 total: evidence or scope unavailable');
+  expect(html).toContain('Needs verification');
+  expect(html).not.toContain('Check against your brief');
   expect(html).not.toContain('Above your saved limit');
-  expect(html).not.toContain('Combination conflicts');
   expect(html).not.toContain('remains before other charges');
 });
 it('warns about a saved record conflicting with the only verified tentative budget', () => {

@@ -1,14 +1,13 @@
 import {expect,it} from 'vitest';
-import {compileBriefConstraints,checkBriefConflicts,checkCombinationBudget,canUseUnresolvedBudgetBound} from '../shared/briefConstraints.js';
+import {compileBriefConstraints as compileBriefConstraintsBase,checkBriefConflicts as checkBriefConflictsBase,canUseUnresolvedBudgetBound} from '../shared/briefConstraints.js';
 import {createBriefState} from '../shared/briefState.js';
 import type {BriefFactV2} from '../shared/briefSchema.js';
 const f=(id:string,operator:'lt'|'lte'|'gt'|'gte',cents=5000,basis:'total'|'per-item'|'unresolved'='per-item',patch:Partial<BriefFactV2>={}):BriefFactV2=>({id,field:'budget',value:{kind:'money',operator,cents,currency:'USD',basis},scope:{kind:'mission'},strength:'requirement',status:basis==='unresolved'?'tentative':'active',origin:'spoken',evidence:{messageId:'m',quote:'budget',explicit:true,verified:true},revision:1,createdAt:'now',...patch});
 const s=(...facts:BriefFactV2[])=>({...createBriefState('m'),facts});
-it.each([['lt',[true,false,false]],['lte',[true,true,false]],['gt',[false,false,true]],['gte',[false,true,true]]] as const)('checks %s at boundary +/- cent',(op,expected)=>{for(let i=0;i<3;i++){const state=s(f('a',op));expect(checkBriefConflicts(state,{Pricing_ActivePrice:(4999+i)/100}).status).toBe(expected[i]?'compliant':'conflict');expect(checkCombinationBudget(state,[{price:(4999+i)/100}]).status).toBe(expected[i]?'compliant':'conflict');}});
+it.each([['lt',[true,false,false]],['lte',[true,true,false]],['gt',[false,false,true]],['gte',[false,true,true]]] as const)('checks %s at boundary +/- cent',(op,expected)=>{for(let i=0;i<3;i++){const state=s(f('a',op));expect(checkBriefConflicts(state,{Pricing_ActivePrice:(4999+i)/100}).status).toBe(expected[i]?'compliant':'conflict');}});
 it('compiles exact per-item range',()=>{expect(compileBriefConstraints(s(f('lo','gte',2000),f('hi','lt',10000))).filters).toBe('Pricing_ActivePrice >= 20.00 AND Pricing_ActivePrice < 100.00');});
-it('does not apply total floor to individual candidates',()=>{const state=s(f('lo','gte',5000,'total'));const c=compileBriefConstraints(state);expect(c.filters).toBeUndefined();expect(c.appliedFactIds).toEqual([]);expect(checkBriefConflicts(state,{Pricing_ActivePrice:20}).status).toBe('unknown');expect(checkCombinationBudget(state,[{price:20},{price:30}]).status).toBe('compliant');expect(checkCombinationBudget(s(f('lo','gte')),[{price:20},{price:30}]).status).toBe('conflict');});
-it('quantities affect total not per-item floor',()=>{expect(checkCombinationBudget(s(f('lo','gte',5000,'total')),[{price:30,quantity:2}]).status).toBe('compliant');expect(checkCombinationBudget(s(f('lo','gte')),[{price:30,quantity:2}]).status).toBe('conflict');});
-it('missing price and foreign currency remain unknown',()=>{expect(checkCombinationBudget(s(f('lo','gte')),[{price:null}]).status).toBe('unknown');const state=s(f('lo','gte',5000,'per-item',{value:{kind:'money',operator:'gte',cents:5000,currency:'GBP',basis:'per-item'}}));expect(compileBriefConstraints(state).filters).toBeUndefined();expect(checkBriefConflicts(state,{Pricing_ActivePrice:60}).status).toBe('unknown');});
+it('does not apply total floor to individual candidates',()=>{const state=s(f('lo','gte',5000,'total'));const c=compileBriefConstraints(state);expect(c.filters).toBeUndefined();expect(c.appliedFactIds).toEqual([]);expect(checkBriefConflicts(state,{Pricing_ActivePrice:20}).status).toBe('unknown');});
+it('foreign currency remains unapplied',()=>{const state=s(f('lo','gte',5000,'per-item',{value:{kind:'money',operator:'gte',cents:5000,currency:'GBP',basis:'per-item'}}));expect(compileBriefConstraints(state).filters).toBeUndefined();expect(checkBriefConflicts(state,{Pricing_ActivePrice:60}).status).toBe('unknown');});
 it('unresolved floor cannot use necessary-upper-bound exemption',()=>{const fact=f('lo','gte',5000,'unresolved');expect(canUseUnresolvedBudgetBound(fact)).toBe(false);expect(compileBriefConstraints(s(fact)).filters).toBeUndefined();expect(checkBriefConflicts(s(fact),{Pricing_ActivePrice:60}).status).toBe('unknown');});
 it.each([['gt',2000,'lt',2001],['gte',5000,'lte',4999],['gte',5000,'lt',5000]] as const)('rejects empty cent interval %s%d%s%d',(lo,lc,hi,hc)=>{const c=compileBriefConstraints(s(f('lo',lo,lc),f('hi',hi,hc)));expect(c.moneyConstraintConflicts[0].factIds).toEqual(['lo','hi']);expect(c.filters).toBeUndefined();expect(c.appliedFactIds).toEqual([]);});
 it('allows one-cent interval with inclusive endpoint',()=>{expect(compileBriefConstraints(s(f('lo','gt',2000),f('hi','lte',2001))).moneyConstraintConflicts).toEqual([]);});
@@ -18,9 +17,22 @@ it('does not block deferred other-item interval',()=>{const item=(key:string)=>(
 it('does not combine currencies when detecting total contradictions',()=>{const lo=f('lo','gte',10000,'total',{value:{kind:'money',operator:'gte',cents:10000,currency:'GBP',basis:'total'}});expect(compileBriefConstraints(s(lo,f('hi','lte',5000,'total'))).moneyConstraintConflicts).toEqual([]);});
 it('does not combine differently owned total constraints',()=>{const a=f('lo','gte',10000,'total',{scope:{kind:'recipient',key:'A'}}),b=f('hi','lte',5000,'total',{scope:{kind:'recipient',key:'B'}});expect(compileBriefConstraints(s(a,b)).moneyConstraintConflicts).toEqual([]);});
 it('retains upper-bound unresolved necessary filtering',()=>{const fact=f('u','lt',10000,'unresolved');expect(canUseUnresolvedBudgetBound(fact)).toBe(true);expect(compileBriefConstraints(s(fact)).filters).toBe('Pricing_ActivePrice < 100.00');expect(checkBriefConflicts(s(fact),{Pricing_ActivePrice:100}).status).toBe('conflict');});
-it.each(['gt','gte'] as const)('checks total %s at boundary +/- cent',operator=>{const state=s(f('a',operator,5000,'total'));expect(checkCombinationBudget(state,[{price:20},{price:29.99}]).status).toBe('conflict');expect(checkCombinationBudget(state,[{price:20},{price:30}]).status).toBe(operator==='gte'?'compliant':'conflict');expect(checkCombinationBudget(state,[{price:20},{price:30.01}]).status).toBe('compliant');});
-it('keeps unknown price total floor unresolved',()=>{expect(checkCombinationBudget(s(f('lo','gte',5000,'total')),[{price:20},{price:null}]).status).toBe('unknown');});
 it.each(['Ring','ring'])('detects a singleton item total contradiction without an explicit target (%s)',key=>{
  const type:BriefFactV2={...f('type','lte'),field:'other',value:{kind:'facet',attribute:'Catalog_ProductType',values:['Ring'],operator:'any'}};
  const state=s(type,f('lo','gte',15000,'total',{scope:{kind:'item',key:'Ring'}}),f('hi','lte',10000,'total',{scope:{kind:'item',key}}));const c=compileBriefConstraints(state);expect(c.moneyConstraintConflicts).toHaveLength(1);expect(c.filters).toBeUndefined();expect(c.appliedFactIds).toEqual([]);
 });
+
+// Fixture live vocabulary (values observed by read-only index interrogation;
+// the runtime receives them from /api/catalog-vocabulary). The frozen JSON
+// fallback these tests previously relied on is retired.
+const testVocabValues:Readonly<Record<string,readonly string[]>>={
+ 'Catalog_ProductType':['Ring','Earrings','Necklace','Bracelet','Pendant','Wrist Watch'],
+ 'Catalog_GemstoneInformation.GemstoneName':['Diamond'],
+ 'Catalog_JewelryMaterialNavigationName':['Silver','Gold','Platinum'],
+ 'Catalog_JewelryMaterialNavigationColor':['White','Yellow','Rose'],
+ 'Catalog_GemstoneInformation.GemstoneShape':['Round','Heart','Flower'],
+ 'Catalog_GemstoneInformation.GemstoneColorGroup':['Blue','White','Red'],
+ 'Catalog_EarringType':['Stud'],
+};
+const compileBriefConstraints=(...args:Parameters<typeof compileBriefConstraintsBase>)=>compileBriefConstraintsBase(args[0],args[1],testVocabValues);
+const checkBriefConflicts=(...args:Parameters<typeof checkBriefConflictsBase>)=>checkBriefConflictsBase(args[0],args[1],testVocabValues);

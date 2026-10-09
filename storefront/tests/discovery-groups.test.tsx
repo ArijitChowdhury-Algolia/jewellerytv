@@ -33,18 +33,12 @@ function model(): WorkspaceViewModel {
     activeView: 'discover',
     setView: vi.fn(),
     compareIds: [],
-    combinationIds: [],
-    combinationQuantities: {},
     toggleCompare: vi.fn(),
-    toggleCombination: vi.fn(),
     pin: vi.fn(),
     remove: vi.fn(),
-    setQuantity: vi.fn(),
     refreshProducts: vi.fn(async () => undefined),
     refreshing: false,
     refreshError: '',
-    budgetCents: null,
-    budgetScope: 'total',
   };
 }
 describe('grouped discovery workspace', () => {
@@ -59,24 +53,25 @@ describe('grouped discovery workspace', () => {
     expect(html).toContain('Gift');
   });
 
-  it('keeps the add-to-combination action visible and marks selected pieces', () => {
+  it('renders proposed looks in Saved with saved pieces marked', () => {
     const workspace = model();
-    workspace.combinationIds = ['a'];
+    workspace.activeView = 'saved';
+    workspace.products = [{ product: product('a'), quantity: 1, observedAt: '' }];
+    workspace.proposedLooks = [
+      {
+        title: 'Everyday Gold Trio',
+        lines: [
+          { product: product('a'), why: 'Anchor', quantity: 1 },
+          { product: product('c'), why: 'Companion', quantity: 1 },
+        ],
+        itemSubtotalCents: 19800,
+      },
+    ];
     const html = renderToStaticMarkup(<ProductWorkspace model={workspace} />);
-    expect(html).toContain('In combination ✓');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain('Add to combination');
-    expect(html).not.toContain('<summary>More</summary>');
-  });
-
-  it('explains the three-piece limit and disables only new additions when full', () => {
-    const workspace = model();
-    workspace.combinationIds = ['a', 'b', 'c'];
-    const html = renderToStaticMarkup(<ProductWorkspace model={workspace} />);
-    expect(html).toContain('Combination limit reached. Remove one piece before adding another.');
-    expect(html).toContain('id="pw-combination-limit"');
-    expect(html).toContain('aria-describedby="pw-combination-limit"');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Add to combination<\/button>/);
+    expect(html).toContain('Everyday Gold Trio');
+    expect(html).toContain('Saved ✓');
+    expect(html).toContain('$198.00');
+    expect(html).not.toContain('Add to combination');
+    expect(html).not.toContain('Quantity');
   });
 });

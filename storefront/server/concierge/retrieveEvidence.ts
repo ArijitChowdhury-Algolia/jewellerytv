@@ -9,6 +9,8 @@ import type {
 } from '../../shared/concierge/retrieval/types.js';
 import type { RetrieveEvidenceInput } from '../../shared/concierge/retrieval/schema.js';
 import { materialMatch as verifyMaterial, type MaterialRequirement } from './materialEvidence.js';
+import type { CatalogVocabularyCache, CatalogVocabularySnapshot } from './catalogVocabulary.js';
+import type { UnavailableRequirement } from '../../shared/concierge/retrieval/types.js';
 import { makeResult } from './retrievalResult.js';
 import {
   METAL_WATCH_BAND_MATERIALS,
@@ -61,6 +63,13 @@ const PRODUCT_PROJECTION = [
   'Catalog_WatchCaseSize',
   'Catalog_WatchCaseShape',
   'Catalog_WatchStyle',
+  // Watch evidence projection repair (STAGE2-WATER-RESISTANCE-PROJECTION-DESIGN,
+  // red test first): the exact catalogue records carry both fields (measured on
+  // 1W9E1B and 1DXZHA); the projection previously discarded them, so the agent
+  // could not ground a stated water-resistance rating or a previously-owned
+  // check. Query-level attributesToRetrieve only; no index setting changes.
+  'Catalog_WaterResistanceRating',
+  'Catalog_PreviouslyOwned',
   'Catalog_EarringType',
   'Catalog_NecklaceType',
   'Catalog_PendantType',
@@ -120,6 +129,10 @@ export type EvidenceRetrieverOptions = {
   now?: () => string;
   timeoutMs?: number;
   signal?: AbortSignal;
+  /** Live catalog vocabulary (filterable attributes + values). Optional for
+   * backward compatibility: without it the compiler behaves exactly as before
+   * the runtime-vocabulary change. */
+  vocabulary?: CatalogVocabularyCache;
 };
 function canonical(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -214,22 +227,53 @@ function targetAllowed(state: BriefStateV3, itemKey: string, productType: string
 function compile(
   state: BriefStateV3,
   target: { itemKey: string; productType: string } | null,
+  vocabulary?: CatalogVocabularySnapshot,
 ): {
   filters: EffectiveFilter[];
   unresolved: Array<{ field: string; reason: string }>;
   material: MaterialRequirement[];
+  fit: Array<{ field: 'fit'; expectedInches: number; ringSize?: string; factId: string }>;
+  unavailable: UnavailableRequirement[];
 } {
   const filters: EffectiveFilter[] = [];
   const unresolved: Array<{ field: string; reason: string }> = [];
   const material: MaterialRequirement[] = [];
+  const fit: Array<{ field: 'fit'; expectedInches: number; ringSize?: string; factId: string }> = [];
+  const unavailable: UnavailableRequirement[] = [];
   const missionTypes = missionProductTypes(state);
+  // Live-vocabulary validation: a requested product type that does not exist in
+  // today's catalogue is not an unsafe filter — it is a disclosure candidate.
+  // Only values that exist become filters; the missing ones ride out as
+  // unavailableRequirements for the agent's conversation.
+  const liveMissionTypes =
+    vocabulary && missionTypes.length
+      ? missionTypes.filter((value) => {
+          const exists = vocabulary.hasValue('Catalog_ProductType', value);
+          if (!exists)
+            unavailable.push({
+              field: 'product_type',
+              attribute: 'Catalog_ProductType',
+              requested: [value],
+              availableValues: vocabulary.availableValues('Catalog_ProductType'),
+            });
+          return exists;
+        })
+      : missionTypes;
   const isWatch =
-    (target?.productType ?? (missionTypes.length === 1 ? missionTypes[0] : '')) === 'Wrist Watch';
-  if (target)
-    filters.push({ field: 'Catalog_ProductType', operator: 'eq', value: target.productType });
-  else {
-    if (missionTypes.length === 1)
-      filters.push({ field: 'Catalog_ProductType', operator: 'eq', value: missionTypes[0] });
+    (target?.productType ?? (liveMissionTypes.length === 1 ? liveMissionTypes[0] : '')) ===
+    'Wrist Watch';
+  if (target) {
+    if (vocabulary && !vocabulary.hasValue('Catalog_ProductType', target.productType))
+      unavailable.push({
+        field: 'target',
+        attribute: 'Catalog_ProductType',
+        requested: [target.productType],
+        availableValues: vocabulary.availableValues('Catalog_ProductType'),
+      });
+    else filters.push({ field: 'Catalog_ProductType', operator: 'eq', value: target.productType });
+  } else {
+    if (liveMissionTypes.length === 1)
+      filters.push({ field: 'Catalog_ProductType', operator: 'eq', value: liveMissionTypes[0] });
   }
   for (const f of state.facts) {
     if (
@@ -301,7 +345,25 @@ function compile(
           field: f.field,
           reason: 'Watch band material family is not supported for this target',
         });
-      else
+      else if (vocabulary) {
+        // Live truth: expand the family into whatever band-metal names the
+        // catalogue actually carries today. Empty live list = attribute not
+        // filterable any more — an honest structural failure, never a guess.
+        const live = vocabulary.availableValues(
+          'Catalog_BandMaterialInformation.WatchBandMaterialName',
+        );
+        if (live.length)
+          filters.push({
+            field: 'Catalog_BandMaterialInformation.WatchBandMaterialName',
+            operator: 'in',
+            value: live,
+          });
+        else
+          unresolved.push({
+            field: f.field,
+            reason: 'Watch band material attribute is not filterable in the live catalogue',
+          });
+      } else
         filters.push({
           field: 'Catalog_BandMaterialInformation.WatchBandMaterialName',
           operator: 'in',
@@ -322,6 +384,16 @@ function compile(
           field: f.field,
           reason: 'Watch feature is not an exact supported catalogue value',
         });
+      else if (
+        vocabulary &&
+        !vocabulary.hasValue(expected, f.value.values[0])
+      )
+        unavailable.push({
+          field: f.field,
+          attribute: expected,
+          requested: [f.value.values[0]],
+          availableValues: vocabulary.availableValues(expected),
+        });
       else filters.push({ field: expected, operator: 'eq', value: f.value.values[0] });
       continue;
     }
@@ -336,6 +408,17 @@ function compile(
         f.value.kind === 'facet' &&
         MATERIAL_ATTRIBUTE_PATHS.has(f.value.attribute))
     ) {
+      // Defense in depth: an exclusion fact with any non-none operator must
+      // never silently compile as an inclusion. The writer gate already
+      // rejects it; the compiler rejects it independently (independent review
+      // of the C4 repair, finding d).
+      if (f.field === 'exclusion' && f.value.kind === 'facet' && f.value.operator !== 'none') {
+        unresolved.push({
+          field: f.field,
+          reason: 'Exclusion facts on material attributes require operator none',
+        });
+        continue;
+      }
       if (f.value.kind === 'facet' && MATERIAL_ATTRIBUTE_PATHS.has(f.value.attribute)) {
         material.push({
           attribute: f.value.attribute.split('.').at(-1) as
@@ -352,7 +435,81 @@ function compile(
         });
       continue;
     }
-    if (f.value.kind !== 'facet' || !PRODUCT_FIELDS.has(f.value.attribute)) {
+    // Fit measurement branch (STAGE3-FIT-COMPILER-REPAIR-PLAN-2026-10-07,
+    // red tests first; ring_us added with the live-vocabulary change, probe-
+    // confirmed 2026-10-08). A typed measurement fit compiles as a POST-search
+    // verification against the returned record's own
+    // Inventory_AvailableSkuSizeNames vocabulary, never as an Algolia filter
+    // and never by inventing a size string. Lengths: in directly, cm and mm
+    // by the recorded rule 1 in = 2.54 cm exactly, Necklace targets only.
+    // Ring sizes: unit ring_us, Ring targets only, matched against the
+    // catalogue's own 'Size N' strings; ring_uk and unknown stay out of scope;
+    // a mission-scoped fit without an item target stays unresolved.
+    if (f.field === 'fit' && f.value.kind === 'measurement') {
+      const measurement = f.value;
+      if (measurement.unit === 'ring_us') {
+        if (!target) {
+          unresolved.push({
+            field: f.field,
+            reason:
+              'Fit requires an explicit item target; mission-scoped fit stays unresolved until the exact item is named',
+          });
+          continue;
+        }
+        if (target.productType !== 'Ring') {
+          unresolved.push({
+            field: f.field,
+            reason: `Fit mapping ring_us is not configured for product type '${target.productType}'`,
+          });
+          continue;
+        }
+        const sizeValue = `Size ${
+          Number.isInteger(measurement.value) ? measurement.value : String(measurement.value)
+        }`;
+        if (vocabulary && !vocabulary.hasValue('Inventory_AvailableSkuSizeNames', sizeValue)) {
+          unavailable.push({
+            field: f.field,
+            attribute: 'Inventory_AvailableSkuSizeNames',
+            requested: [sizeValue],
+            availableValues: vocabulary.availableValues('Inventory_AvailableSkuSizeNames'),
+          });
+          continue;
+        }
+        fit.push({ field: 'fit', expectedInches: Number.NaN, ringSize: sizeValue, factId: f.id });
+        continue;
+      }
+      if (measurement.unit !== 'in' && measurement.unit !== 'cm' && measurement.unit !== 'mm') {
+        unresolved.push({
+          field: f.field,
+          reason: `Fit unit '${measurement.unit}' is not supported by the size mapping`,
+        });
+        continue;
+      }
+      if (!target) {
+        unresolved.push({
+          field: f.field,
+          reason:
+            'Fit requires an explicit item target; mission-scoped fit stays unresolved until the exact item is named',
+        });
+        continue;
+      }
+      if (target.productType !== 'Necklace') {
+        unresolved.push({
+          field: f.field,
+          reason: `Fit mapping is not configured for product type '${target.productType}'`,
+        });
+        continue;
+      }
+      const expectedInches =
+        measurement.unit === 'in'
+          ? measurement.value
+          : measurement.unit === 'cm'
+            ? measurement.value / 2.54
+            : measurement.value / 25.4;
+      fit.push({ field: 'fit', expectedInches, factId: f.id });
+      continue;
+    }
+    if (f.value.kind !== 'facet' || !(vocabulary ? vocabulary.isFilterable(f.value.attribute) : PRODUCT_FIELDS.has(f.value.attribute))) {
       unresolved.push({
         field: f.field,
         reason: 'Constraint is not in the approved exact catalogue vocabulary',
@@ -361,6 +518,8 @@ function compile(
     }
     const attribute = f.value.attribute;
     if (f.value.operator === 'none')
+      // Excluding a value that no longer exists in the catalogue is trivially
+      // satisfied — no live-vocabulary check needed, the filter is safe.
       filters.push(
         ...f.value.values.map((value) => ({
           field: attribute,
@@ -368,15 +527,22 @@ function compile(
           value,
         })),
       );
-    else if (f.value.operator === 'any' && f.value.values.length === 1)
-      filters.push({ field: f.value.attribute, operator: 'eq', value: f.value.values[0] });
-    else
+    else if (f.value.operator === 'any' && f.value.values.length === 1) {
+      if (vocabulary && !vocabulary.hasValue(attribute, f.value.values[0]))
+        unavailable.push({
+          field: f.field,
+          attribute,
+          requested: [f.value.values[0]],
+          availableValues: vocabulary.availableValues(attribute),
+        });
+      else filters.push({ field: f.value.attribute, operator: 'eq', value: f.value.values[0] });
+    } else
       unresolved.push({
         field: f.field,
         reason: 'Only exact single-value facet comparisons are supported',
       });
   }
-  return { filters, unresolved, material };
+  return { filters, unresolved, material, fit, unavailable };
 }
 export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
   const now = options.now ?? (() => new Date().toISOString());
@@ -433,15 +599,45 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
         [],
         { code: 'TARGET_MISMATCH', message: 'Product target is not bound to the accepted brief' },
       );
+    const vocabularySnapshot: CatalogVocabularySnapshot | undefined =
+      input.source === 'prod_catalog' && options.vocabulary
+        ? await options.vocabulary.get().catch((error: unknown) => {
+            // Fail open: the vocabulary scan is validation, not availability.
+            // A transient scan failure must not take search down — fall back to
+            // the legacy constants, loudly.
+            console.error('jtv_catalog_vocabulary_unavailable', {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            return undefined;
+          })
+        : undefined;
     const compiled =
       input.source === 'blog'
-        ? { filters: [], unresolved: [], material: [] }
+        ? { filters: [], unresolved: [], material: [], fit: [], unavailable: [] }
         : compile(
             state,
             input.target
               ? { itemKey: input.target.itemKey, productType: input.target.productType }
               : null,
+            vocabularySnapshot,
           );
+    if (compiled.unavailable.length)
+      // Disclosure model: a requirement the live catalogue cannot satisfy is
+      // conversation data for the agent, never a silent block and never a
+      // silent substitution. The agent discloses what exists and asks.
+      return makeResult(
+        input,
+        state.revision,
+        'requirement_unavailable',
+        compiled.filters,
+        [],
+        [],
+        {
+          code: 'REQUIREMENT_UNAVAILABLE',
+          message: 'One or more stated requirements are not available in the catalogue',
+        },
+        compiled.unavailable,
+      );
     if (compiled.unresolved.length)
       return makeResult(
         input,
@@ -505,6 +701,7 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
       const incomplete: Array<{ field: string; reason: string }> = [];
       const materialUnknown: Array<{ field: string; reason: string }> = [];
       const watchUnknown: Array<{ field: string; reason: string }> = [];
+      const fitUnknown: Array<{ field: string; reason: string }> = [];
       const exactIDs = input.exactObjectIDs ? new Set(input.exactObjectIDs) : null;
       const records = hits.flatMap((raw): EvidenceRecord[] => {
         if (exactIDs && (typeof raw.objectID !== 'string' || !exactIDs.has(raw.objectID)))
@@ -520,6 +717,43 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
           return [];
         }
         if (materialStatus === 'conflict') return [];
+        // Fit verification (fail closed, ALL compiled fit expectations): the
+        // returned record's own size vocabulary must contain every expected
+        // measurement. A record without the size field, or without a matching
+        // size for any compiled fit fact, is a verification failure, never a
+        // silent pass (round-3 review P2: fit[0]-only was fail-open).
+        if (input.source === 'prod_catalog' && compiled.fit.length) {
+          const sizes = record.Inventory_AvailableSkuSizeNames;
+          const sizeStrings = Array.isArray(sizes)
+            ? sizes.filter((entry): entry is string => typeof entry === 'string')
+            : [];
+          const parsedSizes = sizeStrings.map((entry) => Number.parseFloat(entry));
+          const unmet = compiled.fit.filter((entry) => {
+            // Ring sizes are exact catalogue strings ('Size 6'), never parsed
+            // numbers — a parsed match could confuse 6 with 6.5's prefix.
+            if (entry.ringSize !== undefined) return !sizeStrings.includes(entry.ringSize);
+            const match = parsedSizes.some(
+              (parsed) => Number.isFinite(parsed) && Math.abs(parsed - entry.expectedInches) < 1e-9,
+            );
+            return !match;
+          });
+          if (!Array.isArray(sizes) || sizes.length === 0) {
+            fitUnknown.push({
+              field: 'fit',
+              reason: `Required size evidence missing: Inventory_AvailableSkuSizeNames is absent or unreadable on this record (fact ${compiled.fit[0].factId})`,
+            });
+            return [];
+          }
+          if (unmet.length) {
+            fitUnknown.push({
+              field: 'fit',
+              reason: `Required size evidence mismatch: record sizes ${JSON.stringify(sizes)} do not contain the expected size(s) ${unmet
+                .map((entry) => entry.ringSize ?? Number(entry.expectedInches.toFixed(6)).toString())
+                .join(', ')} (fact ${unmet[0].factId})`,
+            });
+            return [];
+          }
+        }
         if (input.source === 'prod_catalog') {
           const watchStatus = watchFeatureStatus(record, compiled.filters);
           if (watchStatus === 'unknown') {
@@ -568,22 +802,23 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
         ];
       });
       const returned = records.slice(0, input.count);
-      if ((incomplete.length || watchUnknown.length) && !returned.length)
+      if ((incomplete.length || watchUnknown.length || fitUnknown.length) && !returned.length)
         return makeResult(input, state.revision, 'incomplete_evidence', compiled.filters, [
           ...incomplete,
           ...materialUnknown,
           ...watchUnknown,
+          ...fitUnknown,
         ]);
       return makeResult(
         input,
         state.revision,
         returned.length
           ? 'ok'
-          : materialUnknown.length || watchUnknown.length
+          : materialUnknown.length || watchUnknown.length || fitUnknown.length
             ? 'incomplete_evidence'
             : 'zero_hits',
         compiled.filters,
-        [...incomplete, ...materialUnknown, ...watchUnknown],
+        [...incomplete, ...materialUnknown, ...watchUnknown, ...fitUnknown],
         returned,
       );
     } catch (error) {

@@ -3,12 +3,47 @@ import { createBriefState, migrateBriefStateV2ToV3 } from '../../shared/briefSta
 import {
   canonicalSha256,
   type ShoppingState,
-  updateShoppingState,
+  updateShoppingState as updateShoppingStateBase,
 } from '../../shared/concierge/state/updateShoppingState.js';
+
+// Every existing call site runs against the fixture vocabulary (the production
+// client always supplies the live payload from /api/catalog-vocabulary). The
+// explicit no-vocabulary behavior is covered in its own test below.
+const updateShoppingState = (
+  state: ShoppingState,
+  input: unknown,
+  message: { id: string; text: string },
+  vocabulary = fixtureVocabulary,
+) => updateShoppingStateBase(state, input, message, vocabulary);
 
 const message = {
   id: 'm-current',
   text: 'Please make the budget up to $200 total, and use silver.',
+};
+// Fixture live vocabulary seeded from the verified Oct 2 index capture plus the
+// probe-confirmed platinum/purity values. Writer validation runs against this,
+// mirroring the /api/catalog-vocabulary payload the client uses in production.
+const fixtureVocabulary = {
+  values: {
+    'Catalog_ProductType': [
+      'Ring', 'Earrings', 'Necklace', 'Bracelet', 'Pendant', 'Wrist Watch',
+    ],
+    'Catalog_MaterialInformation.MaterialType': ['Gold', 'Silver', 'Platinum'],
+    'Catalog_MaterialInformation.MaterialColor': [
+      'White', 'Yellow', 'Blue', 'Rose', 'Two-tone', 'Tri-color',
+    ],
+    'Catalog_MaterialInformation.MaterialPurity': [
+      'Sterling', '10K', '14K', '18K', '24K', '950',
+    ],
+    'Catalog_GemstoneInformation.GemstoneColorGroup': ['Blue', 'White', 'Red'],
+    'Catalog_WatchPrimaryDialPrimaryColor': ['Blue'],
+    'Catalog_WatchBandType': ['Bracelet'],
+  } as Record<string, string[]>,
+  builtAt: '2026-10-08T00:00:00.000Z',
+  hasValue: (attribute: string, value: string) =>
+    (fixtureVocabulary.values[attribute] ?? []).includes(value),
+  availableValues: (attribute: string) => fixtureVocabulary.values[attribute] ?? [],
+  isFilterable: (attribute: string) => attribute in fixtureVocabulary.values,
 };
 const base = (): ShoppingState => ({ brief: createBriefState('mission-1'), receipts: [] });
 const add = (operationId = 'op-1') => ({
@@ -667,7 +702,9 @@ describe('update_shopping_state domain callback', () => {
       id: message.id,
       text: 'exclude colour',
     });
-    expect(unknownColour.result.failure?.code).toBe('UNSUPPORTED_FACT_ENCODING');
+    // Chartreuse does not exist in the live colour vocabulary — rejected with
+    // the specific live-vocabulary code rather than the generic encoding one.
+    expect(unknownColour.result.failure?.code).toBe('VALUE_NOT_IN_LIVE_VOCABULARY');
     const wrongOperator = await updateShoppingState(base(), make('yellow-any', ['Yellow'], 'any'), {
       id: message.id,
       text: 'exclude colour',
@@ -797,5 +834,64 @@ describe('update_shopping_state domain callback', () => {
       const result = await updateShoppingState(base(), input, { id: 'm', text: 'materials' });
       expect(result.result.status).toBe('invalid_input');
     }
+  });
+});
+
+describe('update_shopping_state with live vocabulary', () => {
+  const materialAdd = (id: string, alternatives: unknown[], text: string) => ({
+    missionId: 'mission-1',
+    expectedRevision: 0,
+    operationId: id,
+    sourceMessageId: 'probe',
+    operations: [
+      {
+        action: 'add',
+        factIds: [],
+        fact: {
+          id,
+          field: 'material',
+          value: { kind: 'material_alternatives', alternatives },
+          scope: { kind: 'mission', key: null },
+          strength: 'requirement',
+          certainty: 'explicit',
+        },
+        sourceQuote: text,
+      },
+    ],
+  });
+
+  it('accepts platinum — a value the frozen enum rejected but the index carries', async () => {
+    const result = await updateShoppingState(
+      base(),
+      materialAdd('plat-1', [{ type: 'Platinum', color: null, purity: '950', plating: null }], 'platinum'),
+      { id: 'probe', text: 'platinum' },
+    );
+    expect(result.result.status).toBe('applied');
+  });
+
+  it('rejects a value absent from the live vocabulary with the specific code', async () => {
+    const result = await updateShoppingState(
+      base(),
+      materialAdd('bogus-1', [{ type: 'Unobtanium', color: null, purity: null, plating: null }], 'unobtanium'),
+      { id: 'probe', text: 'unobtanium' },
+    );
+    expect(result.result.status).toBe('invalid_input');
+    expect(result.result.failure?.code).toBe('VALUE_NOT_IN_LIVE_VOCABULARY');
+  });
+
+  it('refuses vocabulary-dependent facts when no vocabulary is supplied (fail closed)', async () => {
+    const result = await updateShoppingStateBase(
+      base(),
+      materialAdd('novocab-1', [{ type: 'Gold', color: null, purity: null, plating: null }], 'gold'),
+      { id: 'probe', text: 'gold' },
+      undefined,
+    );
+    expect(result.result.status).toBe('invalid_input');
+    expect(result.result.failure?.code).toBe('VOCABULARY_UNAVAILABLE');
+  });
+
+  it('still applies money and text facts without vocabulary (fail-open for non-catalogue facts)', async () => {
+    const result = await updateShoppingStateBase(base(), add(), message, undefined);
+    expect(result.result.status).toBe('applied');
   });
 });

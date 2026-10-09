@@ -1,5 +1,5 @@
 import {normalizeProduct,type Product} from './catalog';
-export type WorkspaceView='discover'|'compare'|'saved'|'combination';
+export type WorkspaceView='discover'|'compare'|'saved';
 export type WorkspaceGroup={title:string;why?:string;items:{product:Product;why?:string;assessment?:'compliant'|'unknown'}[]};
 export type WorkspaceRecordEntry={id:string;record:unknown};
 /** Combine saved/selected IDs with exact ID or SKU tokens from the latest shopper turn. */

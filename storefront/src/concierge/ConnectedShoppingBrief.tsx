@@ -7,7 +7,7 @@ import {
   type BriefFactV3Input,
   type BriefStateV3,
 } from '../../shared/briefSchema.js';
-import { MATERIAL_ALTERNATIVE_PURITIES } from '../../shared/concierge/catalogueFactContract.js';
+import { useCatalogVocabulary } from './useCatalogVocabulary';
 import '../shopping-brief.css';
 
 const EDITABLE_FIELDS = [
@@ -109,6 +109,11 @@ export function ConnectedShoppingBrief({
   controlsTarget,
 }: ConnectedShoppingBriefProps) {
   const panelId = useId();
+  // Live purity options from /api/catalog-vocabulary; while loading, the list is
+  // empty rather than a frozen copy (the writer validates against the live
+  // vocabulary anyway, so a stale option could never be saved).
+  const vocabulary = useCatalogVocabulary();
+  const purityOptions = vocabulary?.availableValues('Catalog_MaterialInformation.MaterialPurity') ?? [];
   const facts = brief.facts.filter(
     (fact) => fact.status === 'active' || fact.status === 'tentative',
   );
@@ -440,7 +445,7 @@ export function ConnectedShoppingBrief({
                         }
                       >
                         <option value="">Unknown</option>
-                        {MATERIAL_ALTERNATIVE_PURITIES.map((purity) => (
+                        {purityOptions.map((purity) => (
                           <option value={purity} key={purity}>
                             {purity}
                           </option>

@@ -26,6 +26,7 @@ import {
 } from '../../shared/concierge/state/updateShoppingState.js';
 import { createSessionPersistence, type StorageLike } from './sessionPersistence.js';
 import type { createSessionStore } from './sessionStore.js';
+import type { CatalogVocabulary } from '../../shared/concierge/vocabularyContract.js';
 
 type EvidenceRequest = { input: RetrieveEvidenceInput; brief: BriefStateV3 };
 type EvidenceResponse = RetrieveEvidenceResult & { evidenceBatchRevision: number };
@@ -34,6 +35,10 @@ type RuntimeOptions = {
   initialMissionId: string;
   getCurrentShopperMessage: () => ShopperMessage | null;
   fetchEvidence: (body: EvidenceRequest, signal?: AbortSignal) => Promise<RetrieveEvidenceResult>;
+  /** Live catalog vocabulary loader (/api/catalog-vocabulary). The runtime caches
+   * it for 12h; without it, catalogue-valued facts fail closed with
+   * VOCABULARY_UNAVAILABLE instead of ever being validated against stale code. */
+  fetchVocabulary?: () => Promise<CatalogVocabulary>;
   sessionStore?: ReturnType<typeof createSessionStore>;
 };
 
@@ -45,6 +50,14 @@ type SemanticEvidenceAlias = {
   evidenceBatchRevision: number;
   turnId: string;
   generation: number;
+};
+
+type FinishDiagnostic = { status: 'committed' } | { status: 'rejected'; reason: string };
+type SemanticUpdateOutcome = {
+  status: string;
+  failure?: { code: string; message?: string; currentRevision?: number } | null;
+  presentationInvalidated?: true;
+  nextAction?: 'retrieve_and_present_again';
 };
 
 function newSemanticAliasNonce() {
@@ -177,13 +190,41 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
   let semanticAliasCounter = 0;
   const semanticAliases = new Map<string, SemanticEvidenceAlias>();
   let presentationAttempted = false;
+  let lastFinishDiagnostic: FinishDiagnostic | null = null;
   const semanticUpdates = new Map<
     string,
     {
       payload: string;
-      result: UpdateShoppingStateResult | { status: string; failure?: { code: string } };
+      result: SemanticUpdateOutcome;
     }
   >();
+  // Live catalog vocabulary, refreshed on a 12h TTL. Missing vocabulary never
+  // blocks non-catalogue facts; catalogue-valued facts fail closed with
+  // VOCABULARY_UNAVAILABLE (the agent can explain the hiccup and retry).
+  const VOCABULARY_TTL_MS = 12 * 60 * 60 * 1000;
+  let vocabularyCache: { value: CatalogVocabulary; at: number } | null = null;
+  let vocabularyInFlight: Promise<CatalogVocabulary | undefined> | null = null;
+  async function currentVocabulary(): Promise<CatalogVocabulary | undefined> {
+    if (!options.fetchVocabulary) return undefined;
+    if (vocabularyCache && Date.now() - vocabularyCache.at < VOCABULARY_TTL_MS)
+      return vocabularyCache.value;
+    if (!vocabularyInFlight) {
+      vocabularyInFlight = options
+        .fetchVocabulary()
+        .then((value) => {
+          vocabularyCache = { value, at: Date.now() };
+          return value;
+        })
+        .catch((error: unknown) => {
+          console.warn('jtv_catalog_vocabulary_unavailable', error);
+          return undefined;
+        })
+        .finally(() => {
+          vocabularyInFlight = null;
+        });
+    }
+    return vocabularyInFlight;
+  }
   let activeShopperMessageId = '';
   const restored = options.sessionStore?.getSnapshot();
   if (restored?.committedProposal)
@@ -477,6 +518,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
           : op.fact;
       return { ...op, sourceQuote: op.sourceQuote ?? message.text, fact };
     });
+    const presentationInvalidated = staged !== null;
     const result = await update(
       {
         missionId: session.missionId,
@@ -488,8 +530,16 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
       signal,
     );
     if (result.status === 'aborted' || result.status === 'storage_failure') return result;
-    semanticUpdates.set(toolCallId, { payload, result });
-    return result;
+    const outcome: SemanticUpdateOutcome =
+      result.status === 'applied' && presentationInvalidated
+        ? {
+            ...result,
+            presentationInvalidated: true,
+            nextAction: 'retrieve_and_present_again',
+          }
+        : result;
+    semanticUpdates.set(toolCallId, { payload, result: outcome });
+    return outcome;
   }
 
   async function update(input: unknown, signal?: AbortSignal) {
@@ -499,6 +549,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     if (!message) return { status: 'invalid_input', failure: { code: 'MISSING_SHOPPER_MESSAGE' } };
     const captured: { value: UpdateShoppingStateResult | null } = { value: null };
     let abortedDuringMutation = false;
+    const vocabulary = await currentVocabulary();
     const persisted = await persistence.commitAppliedMutation(async (session) => {
       if (signal?.aborted || requestGeneration !== generation) {
         abortedDuringMutation = true;
@@ -508,6 +559,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
         { brief: session.brief, receipts: storedReceipts(session.receipts) },
         input,
         message,
+        vocabulary,
       );
       if (signal?.aborted || requestGeneration !== generation) {
         abortedDuringMutation = true;
@@ -632,7 +684,15 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     finishedTurnId: string,
     status: PresentationTurnStatus,
   ): StagedPresentation | null {
-    if (!staged || finishedTurnId !== staged.turnId) return null;
+    lastFinishDiagnostic = null;
+    if (!staged) {
+      lastFinishDiagnostic = { status: 'rejected', reason: 'no_staged_proposal' };
+      return null;
+    }
+    if (finishedTurnId !== staged.turnId) {
+      lastFinishDiagnostic = { status: 'rejected', reason: 'turn_id_mismatch' };
+      return null;
+    }
     const session = current();
     const result = commitStagedChoices(
       staged,
@@ -646,7 +706,11 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
       published,
     );
     staged = null;
-    if (result.status !== 'committed') return null;
+    if (result.status !== 'committed') {
+      lastFinishDiagnostic = { status: 'rejected', reason: result.status };
+      return null;
+    }
+    lastFinishDiagnostic = { status: 'committed' };
     published = result.proposal;
     const refs = new Set(
       published.groups.flatMap((group) => group.lines.map((line) => line.evidenceRef)),
@@ -658,9 +722,18 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     const previousPublished = published,
       previousRecords = [...publishedRecords];
     const proposal = finishTurn(finishedTurnId, status);
-    if (!proposal || !options.sessionStore) return proposal;
+    if (!proposal || !options.sessionStore) {
+      if (!proposal && presentationAttempted && import.meta.env.DEV)
+        console.warn('JTV Concierge presentation commit rejected', lastFinishDiagnostic);
+      return proposal;
+    }
     const session = options.sessionStore.getSnapshot();
-    if (!session) return null;
+    if (!session) {
+      lastFinishDiagnostic = { status: 'rejected', reason: 'session_unavailable' };
+      if (presentationAttempted && import.meta.env.DEV)
+        console.warn('JTV Concierge presentation commit rejected', lastFinishDiagnostic);
+      return null;
+    }
     const refs = new Set(
       proposal.groups.flatMap((group) => group.lines.map((line) => line.evidenceRef)),
     );
@@ -710,7 +783,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
         return {
           ...current,
           committedProposal: proposal,
-          activeView: proposal.kind === 'complete_looks' ? 'combination' : 'discover',
+          activeView: proposal.kind === 'complete_looks' ? 'saved' : 'discover',
           products,
           selectionRecords,
           evidence: records.map((record) => ({
@@ -725,8 +798,12 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     if (!result.ok) {
       published = previousPublished;
       publishedRecords = previousRecords;
+      lastFinishDiagnostic = { status: 'rejected', reason: result.reason };
+      if (presentationAttempted && import.meta.env.DEV)
+        console.warn('JTV Concierge presentation commit rejected', lastFinishDiagnostic);
       return null;
     }
+    lastFinishDiagnostic = { status: 'committed' };
     return proposal;
   }
 
@@ -764,6 +841,7 @@ export function createConciergeToolRuntime(options: RuntimeOptions) {
     getPublished: () => published,
     getPublishedRecords: () => publishedRecords,
     hadPresentationAttempt: () => presentationAttempted,
+    getLastFinishDiagnostic: () => lastFinishDiagnostic,
     getSession: current,
   };
 }

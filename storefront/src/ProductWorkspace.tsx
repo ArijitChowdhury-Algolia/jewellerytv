@@ -9,12 +9,11 @@ import {
 import { useShopping, type PinnedProduct } from './ShoppingProvider';
 import { type Product } from './catalog';
 import { productURL } from './routing';
-import { pairTotal } from '../shared/shopping';
 import './product-workspace.css';
-import './product-combination-controls.css';
 import { markWorkspace, markWorkspaceImage, type WorkspaceTraceBinding } from './telemetry';
-import { checkBriefConflicts, checkCombinationBudget } from '../shared/briefConstraints';
-export type View = 'discover' | 'compare' | 'saved' | 'combination';
+import { checkBriefConflicts } from '../shared/briefConstraints';
+import { useCatalogVocabulary } from './concierge/useCatalogVocabulary';
+export type View = 'discover' | 'compare' | 'saved';
 type Discovery = {
   title: string;
   why?: string;
@@ -34,29 +33,13 @@ export type WorkspaceViewModel = {
   activeView: View;
   setView: (v: View) => void;
   compareIds: string[];
-  combinationIds: string[];
-  combinationQuantities: Record<string, number>;
   toggleCompare: (id: string) => void;
-  toggleCombination: (id: string) => void;
   pin: (raw: unknown) => void;
   remove: (id: string) => void;
-  setQuantity: (id: string, n: number) => void;
   refreshProducts: (ids: string[]) => Promise<void>;
   refreshing: boolean;
   refreshError: string;
-  budgetCents: number | null;
-  budgetScope: 'total' | 'per-item';
   assessment?: (product: Product, retrievalStatus?: 'compliant' | 'unknown') => ReactNode;
-  combinationAssessment?: (
-    selected: readonly { product: Product; quantity: number }[],
-  ) => ReactNode;
-  budgetSummary?: (args: {
-    knownSubtotalCents: number;
-    totalCents: number | null;
-    unknownCount: number;
-    budgetCents: number | null;
-    budgetScope: 'total' | 'per-item';
-  }) => ReactNode;
 };
 type ProductShopping = WorkspaceViewModel & { brief?: import('../shared/briefSchema').BriefState };
 const money = (cents: number) =>
@@ -68,9 +51,6 @@ export function workspaceSaveAction(model: WorkspaceViewModel, product: Product)
 }
 export function workspaceCompareAction(model: WorkspaceViewModel, product: Product) {
   return model.toggleCompare(product.id);
-}
-export function workspaceCombinationAction(model: WorkspaceViewModel, product: Product) {
-  return model.toggleCombination(product.id);
 }
 function PlainText({ text }: { text: string }) {
   return (
@@ -162,13 +142,17 @@ export function ProductWorkspace({
   model?: WorkspaceViewModel;
   focusProductId?: string | null;
   focusProductRequest?: number;
-  onPreviewClose?: () => void;
-}) {
+  onPreviewClose?: () => void;}) {
   const legacy = useShopping();
   const location = typeof window === 'undefined' ? { pathname: '/', search: '' } : window.location;
   const raw = model ?? legacy;
   const supplied = !!model;
+  const vocabulary = useCatalogVocabulary();
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [expandedStyles, setExpandedStyles] = useState<{ signature: string; keys: string[] }>({
+    signature: '',
+    keys: [],
+  });
   useEffect(() => {
     if (!previewId || !raw) return;
     const exists =
@@ -211,22 +195,19 @@ export function ProductWorkspace({
   discoveries.forEach((g) => g.items.forEach((i) => byId.set(i.product.id, i.product)));
   s.products.forEach((p) => byId.set(p.product.id, p.product));
   const activePreview = previewId && byId.has(previewId) ? previewId : null;
-  const selectedIds = view === 'combination' ? (s.combinationIds ?? []) : s.compareIds;
+  const selectedIds = s.compareIds;
   const selected = selectedIds.flatMap((id) => {
     const product = byId.get(id);
-    return product ? [{ product, quantity: s.combinationQuantities[id] ?? 1 }] : [];
+    return product ? [{ product }] : [];
   });
-  const comparisonValues =
-    view === 'compare'
-      ? selected.map(({ product }) => {
-          const facts = new Map<string, string>();
-          if (product.brand) facts.set('Brand', product.brand);
-          product.attributes.forEach((attribute) => {
-            if (attribute.value.trim()) facts.set(attribute.label, attribute.value);
-          });
-          return facts;
-        })
-      : [];
+  const comparisonValues = selected.map(({ product }) => {
+    const facts = new Map<string, string>();
+    if (product.brand) facts.set('Brand', product.brand);
+    product.attributes.forEach((attribute) => {
+      if (attribute.value.trim()) facts.set(attribute.label, attribute.value);
+    });
+    return facts;
+  });
   const comparisonLabels = Array.from(
     new Set(comparisonValues.flatMap((facts) => [...facts.keys()])),
   );
@@ -235,14 +216,6 @@ export function ProductWorkspace({
     values: comparisonValues.map((facts) => facts.get(label) ?? null),
   }));
   const missing = selectedIds.filter((id) => !byId.has(id)).length;
-  const totals = pairTotal(selected.map((p) => ({ price: p.product.price, quantity: p.quantity })));
-  const combinationCheck =
-    !supplied && s.brief
-      ? checkCombinationBudget(
-          s.brief,
-          selected.map((p) => ({ price: p.product.price, quantity: p.quantity })),
-        )
-      : null;
   function imageBinding(p: Product) {
     return discoveries.some((g) => g.items.some((i) => i.product.id === p.id))
       ? displayBinding
@@ -257,7 +230,7 @@ export function ProductWorkspace({
         </details>
       ) : null;
     if (supplied || !s.brief) return null;
-    const result = checkBriefConflicts(s.brief, p.raw);
+    const result = checkBriefConflicts(s.brief, p.raw, vocabulary?.values);
     if (result.status === 'compliant') return null;
     return (
       <details className={result.status === 'conflict' ? 'pw-error' : 'pw-status'}>
@@ -289,17 +262,13 @@ export function ProductWorkspace({
     const ids =
       next === 'compare'
         ? s.compareIds
-        : next === 'combination'
-          ? (s.combinationIds ?? [])
-          : next === 'saved'
-            ? s.products.map((p) => p.product.id)
-            : [];
+        : next === 'saved'
+          ? s.products.map((p) => p.product.id)
+          : [];
     if (ids.length) await s.refreshProducts(ids);
   }
   function actions(p: Product) {
     const saved = s.products.some((x) => x.product.id === p.id);
-    const inCombination = s.combinationIds.includes(p.id);
-    const combinationFull = s.combinationIds.length >= 3;
     return (
       <div className="pw-actions">
         <button aria-pressed={saved} onClick={() => workspaceSaveAction(s, p)}>
@@ -311,15 +280,6 @@ export function ProductWorkspace({
           onClick={() => workspaceCompareAction(s, p)}
         >
           {s.compareIds.includes(p.id) ? 'Comparing ✓' : 'Compare'}
-        </button>
-        <button
-          className="pw-combination-toggle"
-          aria-pressed={inCombination}
-          aria-describedby={combinationFull && !inCombination ? 'pw-combination-limit' : undefined}
-          disabled={!inCombination && combinationFull}
-          onClick={() => workspaceCombinationAction(s, p)}
-        >
-          {inCombination ? 'In combination ✓' : 'Add to combination'}
         </button>
       </div>
     );
@@ -366,10 +326,15 @@ export function ProductWorkspace({
     ...group,
     items: [...new Map(group.items.map((item) => [item.product.id, item] as const)).values()],
   }));
+  const styleSignature = groupedDiscoveries
+    .map((group) => `${group.title}:${group.items.map((item) => item.product.id).join(',')}`)
+    .join('|');
+  const openStyleKeys = expandedStyles.signature === styleSignature ? expandedStyles.keys : [];
+  const showStyleLeads = groupedDiscoveries.length > 1;
   return (
     <section className="product-workspace" aria-label="Shopping choices">
       <nav className="pw-views" aria-label="Product views">
-        {(['discover', 'compare', 'saved', 'combination'] as View[]).map((v) => (
+        {(['discover', 'compare', 'saved'] as View[]).map((v) => (
           <button
             key={v}
             aria-current={view === v ? 'page' : undefined}
@@ -379,9 +344,7 @@ export function ProductWorkspace({
               ? 'Discover'
               : v === 'compare'
                 ? `Compare${s.compareIds.length ? ` (${s.compareIds.length})` : ''}`
-                : v === 'saved'
-                  ? `Saved${s.products.length ? ` (${s.products.length})` : ''}`
-                  : `Combination${s.combinationIds?.length ? ` (${s.combinationIds.length})` : ''}`}
+                : `Saved${s.products.length ? ` (${s.products.length})` : ''}`}
           </button>
         ))}
       </nav>
@@ -393,11 +356,6 @@ export function ProductWorkspace({
       {s.refreshError && (
         <p className="pw-error" role="alert">
           {s.refreshError}
-        </p>
-      )}
-      {s.combinationIds.length >= 3 && (
-        <p id="pw-combination-limit" className="pw-limit-note" role="status">
-          Combination limit reached. Remove one piece before adding another.
         </p>
       )}
       {activePreview && (
@@ -440,26 +398,93 @@ export function ProductWorkspace({
             <DiscoverWelcome onStart={onStart} />
           ) : (
             <div className="pw-discovery-groups" data-group-count={groupedDiscoveries.length}>
-              {groupedDiscoveries.map((group, index) => (
-                <section
-                  className="pw-discovery-group"
-                  key={`${group.title}-${index}`}
-                  aria-labelledby={`pw-group-${index}`}
-                >
-                  <h3 id={`pw-group-${index}`}>{group.title}</h3>
-                  <div className="pw-group-items">
-                    {group.items.map(({ product, why, assessment: retrievalStatus }) =>
-                      tile(product, why, undefined, retrievalStatus),
-                    )}
-                  </div>
-                </section>
-              ))}
+              {groupedDiscoveries.map((group, index) => {
+                const styleKey = `${group.title}:${group.items.map((item) => item.product.id).join(',')}`;
+                const variations = showStyleLeads ? group.items.slice(1) : [];
+                const expanded = openStyleKeys.includes(styleKey);
+                return (
+                  <section
+                    className="pw-discovery-group"
+                    key={styleKey}
+                    aria-labelledby={`pw-group-${index}`}
+                  >
+                    <h3 id={`pw-group-${index}`}>{group.title}</h3>
+                    <div className="pw-group-items">
+                      {(showStyleLeads ? group.items.slice(0, 1) : group.items).map(
+                        ({ product, why, assessment: retrievalStatus }) =>
+                          tile(product, why, undefined, retrievalStatus),
+                      )}
+                      {variations.length > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            className="pw-style-toggle"
+                            aria-expanded={expanded}
+                            aria-controls={`pw-style-variations-${index}`}
+                            onClick={() =>
+                              setExpandedStyles({
+                                signature: styleSignature,
+                                keys: expanded
+                                  ? openStyleKeys.filter((key) => key !== styleKey)
+                                  : [...openStyleKeys, styleKey],
+                              })
+                            }
+                          >
+                            {expanded
+                              ? 'Show fewer in this style'
+                              : `See ${variations.length} more in this style`}
+                          </button>
+                          <div
+                            className="pw-style-variations"
+                            id={`pw-style-variations-${index}`}
+                            hidden={!expanded}
+                          >
+                            {variations.map(({ product, why, assessment: retrievalStatus }) =>
+                              tile(product, why, undefined, retrievalStatus),
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>
       )}
       {!activePreview && view === 'saved' && (
         <div className="pw-saved">
+          {!!s.proposedLooks?.length && (
+            <div className="pw-proposed-looks" aria-label="Concierge look options">
+              {s.proposedLooks.map((look, index) => (
+                <section className="pw-discovery-group" key={`${look.title}-${index}`}>
+                  <h3>{look.title}</h3>
+                  <div className="pw-group-items">
+                    {look.lines.map(({ product, why }) =>
+                      tile(
+                        product,
+                        why,
+                        s.products.some((x) => x.product.id === product.id)
+                          ? 'Saved ✓'
+                          : undefined,
+                      ),
+                    )}
+                  </div>
+                  <p className="pw-subtotal">
+                    <span>
+                      {look.itemSubtotalCents === null ? 'Known item subtotal' : 'Item subtotal'}
+                    </span>
+                    <strong>
+                      {look.itemSubtotalCents === null
+                        ? 'Unavailable'
+                        : money(look.itemSubtotalCents)}
+                    </strong>
+                  </p>
+                </section>
+              ))}
+            </div>
+          )}
           {s.products.length ? (
             <div className="pw-grid">{s.products.map(({ product }) => tile(product))}</div>
           ) : (
@@ -467,61 +492,25 @@ export function ProductWorkspace({
           )}
         </div>
       )}
-      {!activePreview && view === 'combination' && !!s.proposedLooks?.length && (
-        <div className="pw-proposed-looks" aria-label="Concierge look options">
-          {s.proposedLooks.map((look, index) => (
-            <section className="pw-discovery-group" key={`${look.title}-${index}`}>
-              <h3>{look.title}</h3>
-              <div className="pw-group-items">
-                {look.lines.map(({ product, why, quantity }) =>
-                  tile(product, quantity > 1 ? `${why} · Quantity ${quantity}` : why),
-                )}
-              </div>
-              <p className="pw-subtotal">
-                <span>
-                  {look.itemSubtotalCents === null ? 'Known item subtotal' : 'Item subtotal'}
-                </span>
-                <strong>
-                  {look.itemSubtotalCents === null ? 'Unavailable' : money(look.itemSubtotalCents)}
-                </strong>
-              </p>
-            </section>
-          ))}
-        </div>
-      )}
-      {!activePreview && (view === 'compare' || view === 'combination') && (
+      {!activePreview && view === 'compare' && (
         <div className="pw-selection">
           {missing > 0 && (
             <p className="pw-error">
               {missing} selected piece{missing > 1 ? 's need' : ' needs'} to be retrieved again
-              before we can show a complete {view}.
+              before we can show a complete comparison.
             </p>
           )}
           {!selected.length ? (
-            view === 'combination' && s.proposedLooks?.length ? null : (
-              <EmptyProducts
-                hint={
-                  view === 'compare'
-                    ? 'Choose Compare on up to three pieces in Discover or Saved.'
-                    : 'Add pieces to a combination to see their item subtotal together.'
-                }
-              />
-            )
+            <EmptyProducts hint="Choose Compare on up to three pieces in Discover or Saved." />
           ) : (
             <>
               <p className="pw-intro">
-                <PlainText
-                  text={
-                    view === 'compare'
-                      ? 'The details that make each piece different. A missing detail stays unknown.'
-                      : 'Your selected pieces together. Quantities refer to catalogue items, which may themselves be sets.'
-                  }
-                />
+                <PlainText text="The details that make each piece different. A missing detail stays unknown." />
               </p>
               <div
                 className="pw-comparison"
                 data-count={selected.length}
-                data-view={view}
+                data-view="compare"
                 style={
                   {
                     '--pw-comparison-row-count': 5 + comparisonFacts.length,
@@ -529,7 +518,7 @@ export function ProductWorkspace({
                   } as CSSProperties
                 }
               >
-                {selected.map(({ product: p, quantity }, productIndex) => (
+                {selected.map(({ product: p }, productIndex) => (
                   <article className="pw-compare-product" key={p.id} data-product-id={p.id}>
                     <div className="pw-compare-image">
                       <ProductImage product={p} binding={imageBinding(p)} />
@@ -537,30 +526,15 @@ export function ProductWorkspace({
                     <h3>{p.title}</h3>
                     <Price product={p} />
                     <div className="pw-compare-assessment">{assessment(p)}</div>
-                    {view === 'compare' ? (
-                      comparisonFacts.length > 0 ? (
-                        <dl className="pw-compare-attributes">
-                          {comparisonFacts.map(({ label, values }) => (
-                            <div key={label}>
-                              <dt>{label}</dt>
-                              <dd>{values[productIndex] || 'Not recorded'}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      ) : null
-                    ) : (
-                      <label className="pw-quantity">
-                        Quantity
-                        <select
-                          aria-label={`Quantity for ${p.title}`}
-                          value={quantity}
-                          onChange={(e) => s.setQuantity(p.id, Number(e.target.value))}
-                        >
-                          {Array.from({ length: 10 }, (_, i) => (
-                            <option key={i + 1}>{i + 1}</option>
-                          ))}
-                        </select>
-                      </label>
+                    {comparisonFacts.length > 0 && (
+                      <dl className="pw-compare-attributes">
+                        {comparisonFacts.map(({ label, values }) => (
+                          <div key={label}>
+                            <dt>{label}</dt>
+                            <dd>{values[productIndex] || 'Not recorded'}</dd>
+                          </div>
+                        ))}
+                      </dl>
                     )}
                     <div className="pw-compare-actions">
                       <div className="pw-actions">
@@ -586,64 +560,14 @@ export function ProductWorkspace({
                       </div>
                       <button
                         className="pw-compare-remove"
-                        onClick={() =>
-                          view === 'compare' ? s.toggleCompare(p.id) : s.toggleCombination(p.id)
-                        }
+                        onClick={() => s.toggleCompare(p.id)}
                       >
-                        Remove from {view === 'compare' ? 'comparison' : 'combination'}
+                        Remove from comparison
                       </button>
                     </div>
                   </article>
                 ))}
               </div>
-              {view === 'combination' && (
-                <div className="pw-subtotal">
-                  {s.combinationAssessment
-                    ? s.combinationAssessment(selected)
-                    : combinationCheck &&
-                      combinationCheck.status !== 'compliant' && (
-                        <p
-                          className={
-                            combinationCheck.status === 'conflict' ? 'pw-error' : 'pw-status'
-                          }
-                        >
-                          {combinationCheck.reasons.join('. ')}
-                        </p>
-                      )}
-                  <span>
-                    {totals.totalCents === null || missing
-                      ? 'Known item subtotal'
-                      : 'Item subtotal'}
-                  </span>
-                  <strong>{money(totals.knownSubtotalCents)}</strong>
-                  {(totals.unknownCount > 0 || missing > 0) && (
-                    <p className="pw-error">
-                      The full total is unknown because a price or selected record is missing.
-                    </p>
-                  )}
-                  {s.budgetSummary
-                    ? s.budgetSummary({
-                        knownSubtotalCents: totals.knownSubtotalCents,
-                        totalCents: totals.totalCents,
-                        unknownCount: totals.unknownCount,
-                        budgetCents: s.budgetCents,
-                        budgetScope: s.budgetScope,
-                      })
-                    : !supplied &&
-                      s.budgetCents !== null && (
-                        <p>
-                          Your saved limit: {money(s.budgetCents)}{' '}
-                          {s.budgetScope === 'total' ? 'total' : 'per item'}.
-                          {combinationCheck?.status === 'compliant' &&
-                          !missing &&
-                          totals.totalCents !== null &&
-                          s.budgetScope === 'total'
-                            ? ` ${money(s.budgetCents - totals.totalCents)} remains before other charges.`
-                            : ''}
-                        </p>
-                      )}
-                </div>
-              )}
               <p className="pw-footnote">
                 Catalogue prices and details can change. Taxes, shipping and any discounts need
                 checking before purchase.

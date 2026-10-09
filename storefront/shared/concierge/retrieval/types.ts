@@ -45,6 +45,7 @@ export type RetrievalStatus =
   | 'zero_hits'
   | 'stale_revision'
   | 'unsupported_constraint'
+  | 'requirement_unavailable'
   | 'timeout'
   | 'aborted'
   | 'incomplete_evidence'
@@ -52,6 +53,17 @@ export type RetrievalStatus =
 
 export type EffectiveFilter =
   EvidenceConstraint | { field: string; operator: 'in'; value: string[] };
+
+export type UnavailableRequirement = {
+  /** Brief fact field the shopper stated (e.g. product_type). */
+  field: string;
+  /** Catalogue attribute the fact compiled against. */
+  attribute: string;
+  /** Requested values that do not exist in the live catalogue vocabulary. */
+  requested: string[];
+  /** What the live catalogue does offer for that attribute. */
+  availableValues: string[];
+};
 
 export type RetrieveEvidenceResult = {
   status: RetrievalStatus;
@@ -63,5 +75,7 @@ export type RetrieveEvidenceResult = {
   effectiveFilters: EffectiveFilter[];
   records: EvidenceRecord[];
   unresolved: Array<{ field: string; reason: string }>;
+  /** Present when status is requirement_unavailable: shopper-facing disclosure data. */
+  unavailableRequirements?: UnavailableRequirement[];
   error?: { code: string; message: string; upstreamStatus?: number };
 };

@@ -55,8 +55,6 @@ function session(binding: 'evidence_bound' | 'legacy_unbound' = 'evidence_bound'
       },
     ],
     compareIds: ['saved-1'],
-    combinationIds: [],
-    combinationQuantities: {},
     activeView: 'compare',
     receipts: [],
     evidence:

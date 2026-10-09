@@ -1,10 +1,23 @@
 import {it,expect} from 'vitest';
-import {compileBriefConstraints,checkBriefConflicts,checkCombinationBudget} from '../shared/briefConstraints';
+import {compileBriefConstraints as compileBriefConstraintsBase,checkBriefConflicts as checkBriefConflictsBase} from '../shared/briefConstraints';
+// Fixture live vocabulary for the attributes these tests exercise (values as
+// observed by read-only index interrogation; the runtime gets them from
+// /api/catalog-vocabulary).
+const testVocabValues:Readonly<Record<string,readonly string[]>>={
+ 'Catalog_ProductType':['Ring','Earrings','Necklace','Bracelet','Pendant','Wrist Watch'],
+ 'Catalog_JewelryMaterialNavigationName':['Silver','Gold','Platinum'],
+ 'Catalog_JewelryMaterialNavigationColor':['White','Yellow','Rose'],
+ 'Catalog_GemstoneInformation.GemstoneShape':['Round','Heart','Flower'],
+ 'Catalog_GemstoneInformation.GemstoneColorGroup':['Blue','White','Red'],
+ 'Catalog_EarringType':['Stud'],
+};
+const compileBriefConstraints=(state:Parameters<typeof compileBriefConstraintsBase>[0],target?:Parameters<typeof compileBriefConstraintsBase>[1])=>compileBriefConstraintsBase(state,target,testVocabValues);
+const checkBriefConflicts=(state:Parameters<typeof checkBriefConflictsBase>[0],record:Record<string,unknown>)=>checkBriefConflictsBase(state,record,testVocabValues);
 import {createBriefState,applyBriefOperations} from '../shared/briefState';
 import type {BriefFactInput} from '../shared/briefSchema';
 const base:BriefFactInput={id:'budget',field:'budget',value:{kind:'money',cents:20000,currency:'USD',operator:'lt',basis:'total'},scope:{kind:'mission'},strength:'requirement',status:'active',origin:'ui',evidence:{messageId:'ui',quote:'under 200',explicit:true,verified:true}};
 const state=(facts:BriefFactInput[])=>applyBriefOperations(createBriefState('m'),{missionId:'m',expectedRevision:0,turnId:'1',operations:facts.map(fact=>({type:'add',fact}))});
-it('preserves strict cents and unknown prices',()=>{const s=state([base]);expect(compileBriefConstraints(s).filters).toBe('Pricing_ActivePrice < 200.00');expect(checkBriefConflicts(s,{Pricing_ActivePrice:200}).status).toBe('conflict');expect(checkBriefConflicts(s,{}).status).toBe('unknown');expect(checkCombinationBudget(s,[{price:99.99},{price:100.01}]).status).toBe('conflict');});
+it('preserves strict cents and unknown prices',()=>{const s=state([base]);expect(compileBriefConstraints(s).filters).toBe('Pricing_ActivePrice < 200.00');expect(checkBriefConflicts(s,{Pricing_ActivePrice:200}).status).toBe('conflict');expect(checkBriefConflicts(s,{}).status).toBe('unknown');});
 it('allows only verified canonical facet vocabulary and OR values',()=>{const f={...base,id:'material',field:'material' as const,value:{kind:'facet' as const,attribute:'Catalog_JewelryMaterialNavigationName',values:['Silver','Gold'],operator:'any' as const}};expect(compileBriefConstraints(state([f])).filters).toBe('(Catalog_JewelryMaterialNavigationName:"Silver" OR Catalog_JewelryMaterialNavigationName:"Gold")');expect(compileBriefConstraints(state([{...f,value:{...f.value,values:['Silver" OR 1=1']}}])).filters).toBeUndefined();});
 it('never globalizes piece scope or treats missing exclusion evidence as proof',()=>{const f={...base,id:'silver',field:'material' as const,scope:{kind:'item' as const,key:'Necklace'},value:{kind:'facet' as const,attribute:'Catalog_JewelryMaterialNavigationName',values:['Silver'],operator:'none' as const}};expect(compileBriefConstraints(state([f])).appliedFactIds).toEqual([]);expect(checkBriefConflicts(state([f]),{}).status).toBe('unknown');});
 it('does not turn no plating or vague style into filter or evidence',()=>{const s=state([{...base,value:{kind:'text',text:'No plating'},field:'exclusion'}]);expect(compileBriefConstraints(s).filters).toBeUndefined();expect(checkBriefConflicts(s,{Catalog_JewelryMaterialNavigationName:'Silver'}).status).toBe('unknown');});
@@ -15,12 +28,10 @@ it('conjoins exclusions while preserving OR inclusions',()=>{
  expect(checkBriefConflicts(state([gem]),{'Catalog_GemstoneInformation':[{GemstoneShape:'Heart'}]}).status).toBe('conflict');
  expect(checkBriefConflicts(state([gem]),{}).status).toBe('unknown');
 });
-it('preserves inclusive bounds and checks exact quantities for combinations',()=>{
+it('preserves inclusive bounds',()=>{
  const s=state([{...base,value:{...base.value as Extract<BriefFactInput['value'],{kind:'money'}>,operator:'lte'}}]);
  expect(compileBriefConstraints(s).filters).toBe('Pricing_ActivePrice <= 200.00');
- expect(checkCombinationBudget(s,[{price:100,quantity:2}]).status).toBe('compliant');
- expect(checkCombinationBudget(s,[{price:100,quantity:3}]).status).toBe('conflict');
- expect(checkCombinationBudget(s,[{price:null}]).status).toBe('unknown');
+ expect(checkBriefConflicts(s,{Pricing_ActivePrice:200})).toMatchObject({status:'unknown'});
 });
 it('leaves unverified unresolved and recipient-scoped budgets unapplied',()=>{
  expect(compileBriefConstraints(state([{...base,evidence:{...base.evidence,verified:false},value:{...base.value as Extract<BriefFactInput['value'],{kind:'money'}>,basis:'unresolved'}}])).filters).toBeUndefined();
@@ -57,7 +68,7 @@ it('resolves objectID item scopes but does not guess aliases or missing item ide
  expect(checkBriefConflicts(state([scoped]),{objectID:'OTHER',Pricing_ActivePrice:200}).status).toBe('unknown');
  expect(checkBriefConflicts(state([{...scoped,scope:{kind:'item',key:'earring'}}]),{Catalog_ProductType:'Earrings',Pricing_ActivePrice:200}).status).toBe('unknown');
 });
-it('does not turn scoped no-plating text into evidence or individual total bounds into combination compliance',()=>{
+it('does not turn scoped no-plating text into evidence or item-scoped bounds into global filters',()=>{
  const scope={kind:'item' as const,key:'Necklace'};
  expect(checkBriefConflicts(state([{...base,scope,value:{kind:'text',text:'No plating'},field:'exclusion'}]),{Catalog_ProductType:'Necklace',Catalog_JewelryMaterialNavigationName:'Silver'}).status).toBe('unknown');
  expect(checkBriefConflicts(state([{...base,scope}]),{Catalog_ProductType:'Necklace',Pricing_ActivePrice:99}).status).toBe('unknown');

@@ -32,8 +32,6 @@ const session = {
   products: boundRecords,
   selectionRecords: boundRecords,
   compareIds: [],
-  combinationIds: [],
-  combinationQuantities: {},
   activeView: 'saved' as const,
   receipts: [],
   evidence: boundRecords.map((record) => ({

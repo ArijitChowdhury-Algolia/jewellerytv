@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {compileBriefConstraints} from '../shared/briefConstraints.js';
+import {compileBriefConstraints as compileBriefConstraintsBase} from '../shared/briefConstraints.js';
 import type {BriefFactV2,BriefState} from '../shared/briefSchema.js';
 const fact=(id:string,patch:Partial<BriefFactV2>={}):BriefFactV2=>({id,field:'other',value:{kind:'facet',attribute:'Catalog_ProductType',values:['Ring'],operator:'any'},scope:{kind:'mission'},strength:'requirement',origin:'spoken',evidence:{messageId:'m',quote:'ring',explicit:true,verified:true},status:'active',revision:1,createdAt:'now',...patch});
 const state=(facts:BriefFactV2[]):BriefState=>({version:2,missionId:'m',revision:1,facts,processedTurns:[],tombstones:[],events:[]});
@@ -19,3 +19,17 @@ describe('safe singleton item scope compilation',()=>{
  it('does not replace a scoped type requirement with the mission union',()=>{const c=compileBriefConstraints(state([fact('type'),fact('scoped-type',{scope:{kind:'item',key:'Ring'},value:{kind:'facet',attribute:'Catalog_ProductType',values:['Necklace'],operator:'any'}})]));expect(c.filters).toBe('Catalog_ProductType:"Ring" AND Catalog_ProductType:"Necklace"');});
  it('keeps scoped unresolved budgets contextual',()=>{const c=compileBriefConstraints(state([fact('type'),fact('price',{...price(),value:{kind:'money',cents:10000,currency:'USD',operator:'lt',basis:'unresolved'}})]));expect(c.appliedFactIds).not.toContain('price');expect(c.unresolvedScopeFactIds).toEqual(['price']);});
 });
+
+// Fixture live vocabulary (values observed by read-only index interrogation;
+// the runtime receives them from /api/catalog-vocabulary). The frozen JSON
+// fallback these tests previously relied on is retired.
+const testVocabValues:Readonly<Record<string,readonly string[]>>={
+ 'Catalog_ProductType':['Ring','Earrings','Necklace','Bracelet','Pendant','Wrist Watch'],
+ 'Catalog_GemstoneInformation.GemstoneName':['Diamond'],
+ 'Catalog_JewelryMaterialNavigationName':['Silver','Gold','Platinum'],
+ 'Catalog_JewelryMaterialNavigationColor':['White','Yellow','Rose'],
+ 'Catalog_GemstoneInformation.GemstoneShape':['Round','Heart','Flower'],
+ 'Catalog_GemstoneInformation.GemstoneColorGroup':['Blue','White','Red'],
+ 'Catalog_EarringType':['Stud'],
+};
+const compileBriefConstraints=(...args:Parameters<typeof compileBriefConstraintsBase>)=>compileBriefConstraintsBase(args[0],args[1],testVocabValues);

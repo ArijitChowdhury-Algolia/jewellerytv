@@ -5,6 +5,8 @@ export const SUPPORTED_FACET_ATTRIBUTES = {
   watch_band_type: 'Catalog_WatchBandType',
 } as const;
 export const WATCH_BAND_MATERIAL_FAMILIES = ['metal'] as const;
+/** LEGACY fallback, used only when no live vocabulary reaches the compiler.
+ * Delete alongside the no-vocabulary compiler path. */
 export const METAL_WATCH_BAND_MATERIALS = [
   'Stainless Steel',
   'Titanium',
@@ -17,23 +19,9 @@ export const METAL_WATCH_BAND_MATERIALS = [
   '14K Gold',
   '18K Gold Over Bronze',
 ] as const;
-export const MATERIAL_ALTERNATIVE_TYPES = ['Gold', 'Silver'] as const;
-export const MATERIAL_ALTERNATIVE_COLORS = ['White'] as const;
-export const MATERIAL_ALTERNATIVE_PURITIES = ['Sterling', '10K', '14K', '18K', '24K'] as const;
-export const PRODUCT_TYPES = [
-  'Ring',
-  'Earrings',
-  'Necklace',
-  'Bracelet',
-  'Pendant',
-  'Wrist Watch',
-] as const;
-export const EXCLUSION_PRODUCT_TYPES = PRODUCT_TYPES;
-export const EXCLUSION_MOTIFS = ['Heart'] as const;
-/** Catalog_MaterialInformation.MaterialColor is a nested, non-faceted attribute. Its
- * exclusion vocabulary reuses the verified navigation colour list; keep it identical to
- * catalogueFacetValues.json values['Catalog_MaterialInformation.MaterialColor'].
- * Observed record colours so far (White, Yellow, Blue) are a subset. */
+/** Catalog_MaterialInformation.MaterialColor is a nested, non-faceted attribute.
+ * Its exclusion VALUES come from the live vocabulary
+ * (Catalog_MaterialInformation.MaterialColor), never from a frozen copy. */
 export const MATERIAL_COLOR_EXCLUSION_ATTRIBUTE =
   'Catalog_MaterialInformation.MaterialColor' as const;
 export const EXCLUSION_MATERIAL_COLORS = [
@@ -54,15 +42,3 @@ export const EXCLUSION_MATERIAL_COLORS = [
   'White',
   'Yellow',
 ] as const;
-export type SupportedFacetField = keyof typeof SUPPORTED_FACET_ATTRIBUTES;
-export function facetAttributeForField(field: string) {
-  return field === 'product_type'
-    ? SUPPORTED_FACET_ATTRIBUTES.product_type
-    : field === 'gemstone'
-      ? SUPPORTED_FACET_ATTRIBUTES.gemstone
-      : field === 'watch_dial_color'
-        ? SUPPORTED_FACET_ATTRIBUTES.watch_dial_color
-        : field === 'watch_band_type'
-          ? SUPPORTED_FACET_ATTRIBUTES.watch_band_type
-          : undefined;
-}

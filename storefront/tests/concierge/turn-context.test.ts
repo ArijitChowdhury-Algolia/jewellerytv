@@ -52,8 +52,6 @@ function session(values: string[]) {
     ],
     selectionRecords: [record],
     compareIds: ['saved-1'],
-    combinationIds: ['watch-1'],
-    combinationQuantities: { 'watch-1': 2 },
     activeView: 'discover',
     receipts: [],
     committedProposal: {
@@ -116,7 +114,6 @@ describe('latest-turn shopping context', () => {
     expect(state.facts[0].slice(3)).toEqual([['m', null], 'p', 'e', 'a']);
     expect(state.saved).toEqual([['saved-1', 2]]);
     expect(state.compareIds).toEqual(['saved-1']);
-    expect(state.combination).toEqual([['watch-1', 2]]);
     expect(state.currentGroups).toEqual([['Most restrained', ['watch-1']]]);
     expect(context).toMatchObject({
       page: 'home',

@@ -7,15 +7,9 @@ import {
   type BriefStateV3,
 } from '../../briefSchema.js';
 import { applyBriefOperationsV3, migrateBriefStateV2ToV3 } from '../../briefState.js';
-import facetCatalogue from '../../catalogueFacetValues.json' with { type: 'json' };
+import type { CatalogVocabulary } from '../vocabularyContract.js';
 import {
   SUPPORTED_FACET_ATTRIBUTES,
-  MATERIAL_ALTERNATIVE_TYPES,
-  MATERIAL_ALTERNATIVE_COLORS,
-  MATERIAL_ALTERNATIVE_PURITIES,
-  PRODUCT_TYPES,
-  EXCLUSION_MOTIFS,
-  EXCLUSION_MATERIAL_COLORS,
   MATERIAL_COLOR_EXCLUSION_ATTRIBUTE,
   WATCH_BAND_MATERIAL_FAMILIES,
 } from '../catalogueFactContract.js';
@@ -71,9 +65,11 @@ const materialAlternativesValue = z
       .array(
         z
           .object({
-            type: z.enum(MATERIAL_ALTERNATIVE_TYPES).nullable(),
-            color: z.enum(MATERIAL_ALTERNATIVE_COLORS).nullable(),
-            purity: z.enum(MATERIAL_ALTERNATIVE_PURITIES).nullable(),
+            // Free strings here; live-vocabulary validation happens in
+            // toBriefFact so the accepted values follow the index, not code.
+            type: z.string().max(160).nullable(),
+            color: z.string().max(160).nullable(),
+            purity: z.string().max(160).nullable(),
             plating: z
               .object({
                 presence: z.enum(['required', 'forbidden']),
@@ -228,7 +224,19 @@ function toBriefFact(
   f: NonNullable<UpdateShoppingStateInput['operations'][number]['fact']>,
   sourceMessageId: string,
   quote: string,
+  vocabulary: CatalogVocabulary | undefined,
 ): BriefFactV3Input {
+  /** Live-vocabulary value gate. The index is the only source of truth for
+   * which values exist; a fact the writer cannot verify against the live
+   * vocabulary is refused with a distinct, agent-readable code. */
+  const liveValues = (attribute: string): string[] => {
+    if (!vocabulary) throw new Error(`VOCABULARY_UNAVAILABLE:${f.id}:${f.field}`);
+    return vocabulary.availableValues(attribute);
+  };
+  const requireLiveValue = (attribute: string, value: string) => {
+    if (!liveValues(attribute).includes(value))
+      throw new Error(`VALUE_NOT_IN_LIVE_VOCABULARY:${f.id}:${f.field}:${attribute}:${value}`);
+  };
   if (f.field === 'material' && f.value.kind === 'facet')
     throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
   if (f.field === 'product_type' && f.value.kind === 'text')
@@ -241,6 +249,13 @@ function toBriefFact(
     throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
   if (f.field === 'watch_band_material' && f.value.kind !== 'watch_band_family')
     throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
+  if (f.value.kind === 'material_alternatives') {
+    for (const alternative of f.value.alternatives) {
+      if (alternative.type !== null) requireLiveValue('Catalog_MaterialInformation.MaterialType', alternative.type);
+      if (alternative.color !== null) requireLiveValue('Catalog_MaterialInformation.MaterialColor', alternative.color);
+      if (alternative.purity !== null) requireLiveValue('Catalog_MaterialInformation.MaterialPurity', alternative.purity);
+    }
+  }
   if (f.value.kind === 'facet') {
     const facet = f.value;
     const expected =
@@ -274,32 +289,32 @@ function toBriefFact(
       throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
     if (
       f.field === 'product_type' &&
-      (facet.operator !== 'any' ||
-        facet.values.some((value) => !(PRODUCT_TYPES as readonly string[]).includes(value)))
+      (facet.operator !== 'any' || facet.values.some((value) => !liveValues('Catalog_ProductType').includes(value)))
     )
-      throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
-    if (
-      f.field === 'exclusion' &&
-      (facet.operator !== 'none' ||
-        (facet.attribute === 'Catalog_ProductType'
-          ? facet.values.some((value) => !(PRODUCT_TYPES as readonly string[]).includes(value))
-          : facet.attribute === 'Catalog_Motif'
-            ? facet.values.some((value) => !(EXCLUSION_MOTIFS as readonly string[]).includes(value))
-            : facet.attribute === MATERIAL_COLOR_EXCLUSION_ATTRIBUTE
-              ? facet.values.some(
-                  (value) => !(EXCLUSION_MATERIAL_COLORS as readonly string[]).includes(value),
-                )
-              : true))
-    )
-      throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
-    const allowed = (facetCatalogue.values as Record<string, string[]>)[facet.attribute];
-    if (
-      !allowed &&
-      !(facet.attribute === 'Catalog_Motif' && facet.values.every((value) => value === 'Heart'))
-    )
-      throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
-    if (allowed && facet.values.some((value) => !allowed.includes(value)))
-      throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
+      throw new Error(
+        facet.values.some((value) => !liveValues('Catalog_ProductType').includes(value))
+          ? `VALUE_NOT_IN_LIVE_VOCABULARY:${f.id}:${f.field}:Catalog_ProductType:${facet.values.find((value) => !liveValues('Catalog_ProductType').includes(value))}`
+          : `UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`,
+      );
+    if (f.field === 'exclusion') {
+      if (facet.operator !== 'none') throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
+      if (facet.attribute === 'Catalog_ProductType') {
+        facet.values.forEach((value) => requireLiveValue('Catalog_ProductType', value));
+      } else if (facet.attribute === 'Catalog_Motif') {
+        // Catalog_Motif is not exposed as a scannable facet; the single verified
+        // exclusion value remains a literal naming-map entry, not a frozen copy.
+        if (facet.values.some((value) => value !== 'Heart'))
+          throw new Error(`UNSUPPORTED_FACT_ENCODING:${f.id}:${f.field}`);
+      } else if (facet.attribute === MATERIAL_COLOR_EXCLUSION_ATTRIBUTE) {
+        facet.values.forEach((value) =>
+          requireLiveValue(MATERIAL_COLOR_EXCLUSION_ATTRIBUTE, value),
+        );
+      }
+    }
+    if (f.field !== 'exclusion') {
+      if (f.field === 'gemstone' || f.field === 'watch_dial_color' || f.field === 'watch_band_type')
+        facet.values.forEach((value) => requireLiveValue(facet.attribute, value));
+    }
   }
   if (f.scope.kind !== 'mission' && !f.scope.key) throw new Error('unsupported_scope_key');
   const value: BriefFactV3Input['value'] =
@@ -328,6 +343,7 @@ export async function updateShoppingState(
   state: ShoppingState,
   rawInput: unknown,
   currentMessage: ShopperMessage,
+  vocabulary?: CatalogVocabulary,
 ): Promise<{ state: ShoppingState; result: UpdateShoppingStateResult }> {
   const brief: BriefStateV3 =
     state.brief.version === 2
@@ -423,12 +439,12 @@ export async function updateShoppingState(
         : o.action === 'add'
           ? {
               type: 'add' as const,
-              fact: toBriefFact(o.fact!, input.sourceMessageId, o.sourceQuote),
+              fact: toBriefFact(o.fact!, input.sourceMessageId, o.sourceQuote, vocabulary),
             }
           : {
               type: 'replace' as const,
               factIds: o.factIds,
-              fact: toBriefFact(o.fact!, input.sourceMessageId, o.sourceQuote),
+              fact: toBriefFact(o.fact!, input.sourceMessageId, o.sourceQuote, vocabulary),
             },
     );
     if (
@@ -472,14 +488,22 @@ export async function updateShoppingState(
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'operation_rejected';
     const unsupported = detail.startsWith('UNSUPPORTED_FACT_ENCODING');
+    const notLive = detail.startsWith('VALUE_NOT_IN_LIVE_VOCABULARY');
+    const noVocabulary = detail.startsWith('VOCABULARY_UNAVAILABLE');
     return {
       state,
       result: await failure(
         input,
         state.brief,
         'invalid_input',
-        unsupported ? 'UNSUPPORTED_FACT_ENCODING' : 'operation_rejected',
-        unsupported ? detail : detail,
+        notLive
+          ? 'VALUE_NOT_IN_LIVE_VOCABULARY'
+          : noVocabulary
+            ? 'VOCABULARY_UNAVAILABLE'
+            : unsupported
+              ? 'UNSUPPORTED_FACT_ENCODING'
+              : 'operation_rejected',
+        detail,
       ),
     };
   }

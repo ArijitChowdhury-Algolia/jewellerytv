@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {checkBriefConflicts} from '../shared/briefConstraints';
+import {checkBriefConflicts as checkBriefConflictsBase} from '../shared/briefConstraints';
 import {createBriefState,applyBriefOperations} from '../shared/briefState';
 const attribute='Catalog_GemstoneInformation.GemstoneName';
 function brief(operator:'any'|'none'='none'){
@@ -46,3 +46,12 @@ it('does not change positive any behavior for partially known flat arrays',()=>{
  expect(checkBriefConflicts(brief('any'),{[attribute]:['Diamond',null]}).status).toBe('compliant');
  expect(checkBriefConflicts(brief('any'),{[attribute]:['Pearl',null]}).status).toBe('conflict');
 });
+
+// Fixture live vocabulary (values observed by read-only index interrogation;
+// the runtime receives them from /api/catalog-vocabulary). The frozen JSON
+// fallback these tests previously relied on is retired.
+const testVocabValues:Readonly<Record<string,readonly string[]>>={
+ 'Catalog_ProductType':['Ring','Earrings','Necklace','Bracelet','Pendant','Wrist Watch'],
+ 'Catalog_GemstoneInformation.GemstoneName':['Diamond','Pearl'],
+};
+const checkBriefConflicts=(...args:Parameters<typeof checkBriefConflictsBase>)=>checkBriefConflictsBase(args[0],args[1],testVocabValues);

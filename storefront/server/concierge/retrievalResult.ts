@@ -2,6 +2,7 @@ import type {
   EffectiveFilter,
   EvidenceRecord,
   RetrieveEvidenceResult,
+  UnavailableRequirement,
 } from '../../shared/concierge/retrieval/types.js';
 import type { RetrieveEvidenceInput } from '../../shared/concierge/retrieval/schema.js';
 export function makeResult(
@@ -12,6 +13,7 @@ export function makeResult(
   unresolved: RetrieveEvidenceResult['unresolved'],
   records: EvidenceRecord[] = [],
   error?: RetrieveEvidenceResult['error'],
+  unavailableRequirements?: UnavailableRequirement[],
 ): RetrieveEvidenceResult {
   return {
     status,
@@ -24,5 +26,6 @@ export function makeResult(
     unresolved,
     records,
     ...(error ? { error } : {}),
+    ...(unavailableRequirements ? { unavailableRequirements } : {}),
   };
 }

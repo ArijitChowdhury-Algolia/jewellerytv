@@ -96,9 +96,7 @@ export const conciergeSessionSchema = z
     products: z.array(savedProductSchema).max(12),
     selectionRecords: z.array(savedProductSchema).max(12),
     compareIds: z.array(z.string()).max(3),
-    combinationIds: z.array(z.string()).max(3),
-    combinationQuantities: z.record(z.string(), z.number().int().min(1).max(10)),
-    activeView: z.enum(['discover', 'saved', 'compare', 'combination']),
+    activeView: z.enum(['discover', 'saved', 'compare']),
     receipts: z.array(receipt).max(200),
     committedProposal: proposal.nullable().optional(),
     evidence: z
@@ -123,15 +121,11 @@ export function validateConciergeSession(value: unknown): ConciergeSession | nul
     const selectionIds = new Set(parsed.selectionRecords.map((product) => product.objectID));
     const knownIds = new Set([...savedIds, ...selectionIds]);
     const compareIds = new Set(parsed.compareIds);
-    const combinationIds = new Set(parsed.combinationIds);
     if (
       savedIds.size !== parsed.products.length ||
       selectionIds.size !== parsed.selectionRecords.length ||
       compareIds.size !== parsed.compareIds.length ||
-      combinationIds.size !== parsed.combinationIds.length ||
-      parsed.compareIds.some((id) => !knownIds.has(id)) ||
-      parsed.combinationIds.some((id) => !knownIds.has(id)) ||
-      Object.keys(parsed.combinationQuantities).some((id) => !parsed.combinationIds.includes(id))
+      parsed.compareIds.some((id) => !knownIds.has(id))
     )
       return null;
     const registry = new Map<string, SourceBoundProduct>();

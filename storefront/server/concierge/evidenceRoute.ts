@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { briefStateV3Schema } from '../../shared/briefSchema.js';
 import { retrieveEvidenceInputSchema } from '../../shared/concierge/retrieval/schema.js';
 import { createAlgoliaEvidenceSearch, createEvidenceRetriever } from './retrieveEvidence.js';
+import type { CatalogVocabularyCache } from './catalogVocabulary.js';
 
 const requestSchema = z
   .object({
@@ -20,6 +21,7 @@ export async function runEvidenceRoute(
     searchOnlyApiKey: string;
     fetch: typeof fetch;
     signal: AbortSignal;
+    vocabulary?: CatalogVocabularyCache;
   },
 ) {
   const request = requestSchema.parse(raw);
@@ -27,6 +29,7 @@ export async function runEvidenceRoute(
     search: createAlgoliaEvidenceSearch(options),
     currentState: () => request.brief,
     signal: options.signal,
+    ...(options.vocabulary ? { vocabulary: options.vocabulary } : {}),
   });
   return retrieve(request.input);
 }

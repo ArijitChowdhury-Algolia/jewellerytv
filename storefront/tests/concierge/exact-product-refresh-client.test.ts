@@ -46,8 +46,6 @@ function setup(id = 'saved:blue') {
       products: [saved],
       selectionRecords: [saved],
       compareIds: [id],
-      combinationIds: [],
-      combinationQuantities: {},
       activeView: 'compare',
       receipts: [],
       evidence: [

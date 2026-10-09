@@ -36,6 +36,7 @@ export function createConciergeWorkspaceSession(options: {
   getCurrentShopperMessage: () => ShopperMessage | null;
   fetchEvidence: (body: unknown, signal?: AbortSignal) => Promise<RetrieveEvidenceResult>;
   fetchExactProducts?: (body: unknown, signal?: AbortSignal) => Promise<RetrieveEvidenceResult>;
+  fetchVocabulary?: () => Promise<import('../../shared/concierge/vocabularyContract.js').CatalogVocabulary>;
 }): ConciergeWorkspaceSession {
   const store = createSessionStore(options.storage, options.initialMissionId);
   const runtime = createConciergeToolRuntime({
@@ -68,18 +69,12 @@ export function createConciergeWorkspaceSession(options: {
         activeView: 'discover',
         setView: disabled,
         compareIds: [],
-        combinationIds: [],
-        combinationQuantities: {},
         toggleCompare: disabled,
-        toggleCombination: disabled,
         pin: disabled,
         remove: disabled,
-        setQuantity: disabled,
         refreshProducts: refresh.refreshProducts,
         refreshing: false,
         refreshError: 'The saved session is unavailable. Workspace actions are disabled.',
-        budgetCents: null,
-        budgetScope: 'total',
         assessment: () => 'Needs verification',
       };
     }
@@ -149,15 +144,6 @@ export function createConciergeWorkspaceSession(options: {
       if (legacyIds.has(product.id) || !status) return 'Needs verification';
       return status === 'unknown' ? 'Needs verification' : null;
     };
-    const budgetFact = state?.brief.facts.find(
-      (fact) =>
-        fact.status === 'active' &&
-        fact.field === 'budget' &&
-        fact.strength === 'requirement' &&
-        fact.certainty === 'explicit' &&
-        fact.value.kind === 'money' &&
-        fact.value.basis !== 'unresolved',
-    );
     const model: WorkspaceViewModel = {
       products: state.products.flatMap(entry).filter((item): item is ProductEntry => item !== null),
       selectionRecords: [...selectedProducts.values()],
@@ -166,8 +152,6 @@ export function createConciergeWorkspaceSession(options: {
       activeView: state.activeView ?? 'discover',
       setView: (activeView) => transact((current) => ({ ...current, activeView })),
       compareIds: state.compareIds ?? [],
-      combinationIds: state.combinationIds ?? [],
-      combinationQuantities: state.combinationQuantities ?? {},
       toggleCompare: (id) =>
         transact((current) => {
           const ids = [...current.compareIds];
@@ -176,15 +160,6 @@ export function createConciergeWorkspaceSession(options: {
           else if (ids.length < 3 && selectedProducts.has(id)) ids.push(id);
           else return current;
           return { ...current, compareIds: ids };
-        }),
-      toggleCombination: (id) =>
-        transact((current) => {
-          const ids = [...current.combinationIds];
-          const index = ids.indexOf(id);
-          if (index >= 0) ids.splice(index, 1);
-          else if (ids.length < 3 && selectedProducts.has(id)) ids.push(id);
-          else return current;
-          return { ...current, combinationIds: ids };
         }),
       pin: (raw) => {
         if ((state?.products.length ?? 0) >= 12) return;
@@ -199,24 +174,9 @@ export function createConciergeWorkspaceSession(options: {
           ...current,
           products: current.products.filter((item) => item.objectID !== id),
         })),
-      setQuantity: (id, quantity) => {
-        if (quantity >= 1 && quantity <= 10)
-          transact((current) => ({
-            ...current,
-            combinationQuantities: { ...current.combinationQuantities, [id]: quantity },
-          }));
-      },
       refreshProducts: refresh.refreshProducts,
       refreshing: refresh.isRefreshing(),
       refreshError: refresh.getError(),
-      budgetCents:
-        budgetFact?.value.kind === 'money' && budgetFact.value.currency === 'USD'
-          ? budgetFact.value.cents
-          : null,
-      budgetScope:
-        budgetFact?.value.kind === 'money' && budgetFact.value.basis === 'per-item'
-          ? 'per-item'
-          : 'total',
       assessment,
     };
     return model;

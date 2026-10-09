@@ -6,6 +6,9 @@ export const exactObjectId = z
     /^[A-Za-z0-9][A-Za-z0-9._:-]{0,149}$/,
     'Exact objectID must be a safe catalogue identifier',
   );
+/** Kept as a UI/typing convenience list only. Wire validation is a plain safe
+ * string; the live-vocabulary check for target product types happens in the
+ * compiler (retrieveEvidence), which knows today's catalogue values. */
 export const SUPPORTED_PRODUCT_TYPES = [
   'Ring',
   'Earrings',
@@ -26,7 +29,7 @@ const common = {
       .object({
         kind: z.literal('item'),
         itemKey: boundedId,
-        productType: z.enum(SUPPORTED_PRODUCT_TYPES),
+        productType: boundedId,
       })
       .strict(),
     z.null(),

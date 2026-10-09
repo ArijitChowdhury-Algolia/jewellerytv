@@ -20,10 +20,10 @@ describe('bounded extraction evidence',()=>{
 
 it('new conversation retains saved pieces but clears the previous mission and working selections',()=>{
  const state=newShoppingState();
- const previous={...state,products:[{product:{id:'kept'} as any,quantity:1,observedAt:'today'}],compareIds:['kept'],combinationIds:['kept'],combinationQuantities:{kept:2},activeView:'saved' as const,selectionRecords:[{id:'kept'} as any],budgetCents:20000};
+ const previous={...state,products:[{product:{id:'kept'} as any,quantity:1,observedAt:'today'}],compareIds:['kept'],activeView:'saved' as const,selectionRecords:[{id:'kept'} as any],budgetCents:20000};
  const reset=resetShoppingMission(previous);
  expect(reset.products).toEqual(previous.products);expect(reset.missionId).not.toBe(previous.missionId);
- expect(reset.compareIds).toEqual([]);expect(reset.combinationIds).toEqual([]);expect(reset.combinationQuantities).toEqual({});expect(reset.selectionRecords).toEqual([]);
+ expect(reset.compareIds).toEqual([]);expect(reset.selectionRecords).toEqual([]);
  expect(reset.brief.facts).toEqual([]);expect(reset.budgetCents).toBeNull();expect(reset.activeView).toBe('discover');
  expect(previous.compareIds).toEqual(['kept']);
 });
