@@ -167,7 +167,7 @@ test('six saved pieces can be compared, narrowed, and restored without deleting 
       }
       await expect(
         workspace.getByRole('navigation', { name: 'Product views' }).getByRole('button', {
-          name: 'Saved (6)',
+          name: 'Selected (6)',
         }),
       ).toBeVisible();
 
@@ -207,7 +207,7 @@ test('six saved pieces can be compared, narrowed, and restored without deleting 
       ).toBeVisible();
       await expect(
         workspace.getByRole('navigation', { name: 'Product views' }).getByRole('button', {
-          name: 'Saved (6)',
+          name: 'Selected (6)',
         }),
       ).toBeVisible();
       const beforeReload = await page.evaluate((key) => {
@@ -234,7 +234,7 @@ test('six saved pieces can be compared, narrowed, and restored without deleting 
       await expect(
         restoredWorkspace
           .getByRole('navigation', { name: 'Product views' })
-          .getByRole('button', { name: 'Saved (6)' }),
+          .getByRole('button', { name: 'Selected (6)' }),
       ).toBeVisible();
       const restoredState = await page.evaluate((key) => {
         const value = sessionStorage.getItem(key);

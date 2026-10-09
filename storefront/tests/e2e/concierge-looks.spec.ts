@@ -170,13 +170,13 @@ test('stage 6 offline looks acceptance: browser evidence plus machinery proofs',
     if (/algolia\.net|agent-studio/.test(request.url())) paidUrls.push(request.url());
   });
 
-  // ---- Browser case B1: agent-proposed complete look renders in Saved with subtotal
+  // ---- Browser case B1: agent-proposed complete look renders in Selected with subtotal
   try {
     await stubAllUpstreams(page);
     const { workspace } = await openWorkspace(page, 'jtv-test-stage6-looks-b1');
     await workspace
       .getByRole('navigation', { name: 'Product views' })
-      .getByRole('button', { name: /^Saved\(5\)$|^Saved \(5\)$/ })
+      .getByRole('button', { name: /^Selected\(5\)$|^Selected \(5\)$/ })
       .click();
     const savedCards = workspace.locator('.pw-saved .pw-grid .pw-product[data-product-id]');
     await expect(savedCards).toHaveCount(5);
@@ -184,10 +184,10 @@ test('stage 6 offline looks acceptance: browser evidence plus machinery proofs',
       RUN_ID,
       'B1:saved-cards-present',
       'pass',
-      '5 seeded fixture cards visible in Saved view',
+      '5 seeded fixture cards visible in Selected view',
     );
 
-    // The seeded committed complete look lands in Saved (no Combination tab).
+    // The seeded committed complete look lands in Selected (no Combination tab).
     const looks = workspace.locator('.pw-proposed-looks .pw-discovery-group');
     await expect(looks).toHaveCount(1);
     screenshots.push(await shot(page, 'b1-look-in-saved', projectName));
@@ -195,7 +195,7 @@ test('stage 6 offline looks acceptance: browser evidence plus machinery proofs',
       RUN_ID,
       'B1:look-lands-in-saved',
       'pass',
-      'seeded complete look renders in Saved view with no Combination tab',
+      'seeded complete look renders in Selected view with no Combination tab',
     );
 
     const subtotalRegion = workspace.getByText(/Known item subtotal|Item subtotal/).first();
@@ -213,12 +213,12 @@ test('stage 6 offline looks acceptance: browser evidence plus machinery proofs',
 
     // Seeded look pieces are all saved, so each line carries the Saved mark.
     const savedMarks = await workspace.locator('.pw-proposed-looks').textContent();
-    const marksOk = savedMarks?.includes('Saved \u2713') ?? false;
+    const marksOk = savedMarks?.includes('Selected \u2713') ?? false;
     ledger.recordAssertion(
       RUN_ID,
       'B1:saved-overlap-marks',
       marksOk ? 'pass' : 'fail',
-      'look lines overlapping the saved grid are marked Saved',
+      'look lines overlapping the saved grid are marked Selected',
     );
     expect(await workspace.getByRole('button', { name: 'Add to combination' }).count()).toBe(0);
     screenshots.push(await shot(page, 'b1-final-state', projectName));
@@ -233,7 +233,7 @@ test('stage 6 offline looks acceptance: browser evidence plus machinery proofs',
     const { workspace } = await openWorkspace(page, 'jtv-test-stage6-looks-b3');
     await workspace
       .getByRole('navigation', { name: 'Product views' })
-      .getByRole('button', { name: /^Saved/ })
+      .getByRole('button', { name: /^Selected/ })
       .click();
     const savedCards = workspace.locator('.pw-saved .pw-grid .pw-product[data-product-id]');
     await expect(savedCards).toHaveCount(5);
@@ -246,7 +246,7 @@ test('stage 6 offline looks acceptance: browser evidence plus machinery proofs',
       .click();
     await workspace
       .getByRole('navigation', { name: 'Product views' })
-      .getByRole('button', { name: /^Saved/ })
+      .getByRole('button', { name: /^Selected/ })
       .click();
     await expect(savedCards).toHaveCount(5);
     const after = await savedCards.first().textContent();

@@ -69,7 +69,7 @@ describe('grouped discovery workspace', () => {
     ];
     const html = renderToStaticMarkup(<ProductWorkspace model={workspace} />);
     expect(html).toContain('Everyday Gold Trio');
-    expect(html).toContain('Saved ✓');
+    expect(html).toContain('Selected ✓');
     expect(html).toContain('$198.00');
     expect(html).not.toContain('Add to combination');
     expect(html).not.toContain('Quantity');

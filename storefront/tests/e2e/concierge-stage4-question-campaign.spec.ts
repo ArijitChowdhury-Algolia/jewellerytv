@@ -30,6 +30,7 @@ import {
   nextStage4Case,
   pinStage4AgentSnapshot,
   STAGE4_QUESTION_CASES,
+  STAGE4_QUESTION_CANDIDATE_SHA256,
   verifyStage4Pins,
   type CampaignPins,
   type Stage4Campaign,
@@ -388,7 +389,7 @@ test('Stage 4 question campaign runs only the next review-cleared case', async (
     writeJson(path.join(runDir, 'pins', 'initial.json'), {
       pins: startPins.pins,
       runtimeFiles: startPins.runtimeFiles,
-      agentSnapshotPath: path.relative(repoRoot, startPins.agentSnapshotPath),
+      agentSnapshotPath: path.relative(repoRoot, startPins.localAgentSnapshotPath),
     });
     appendStage4CampaignEvent(runDir, { type: 'campaign-created', pins: startPins.pins });
     console.log(`Stage 4 campaign created: ${path.relative(repoRoot, runDir)}`);
@@ -711,7 +712,7 @@ test('Stage 4 question campaign runs only the next review-cleared case', async (
     writeJson(path.join(runDir, `pins-${next.id}-end.json`), {
       pins: endPins?.pins ?? null,
       runtimeFiles: endPins?.runtimeFiles ?? initialRuntimeFiles,
-      agentSnapshotPath: endPins ? path.relative(repoRoot, endPins.agentSnapshotPath) : null,
+      agentSnapshotPath: endPins ? path.relative(repoRoot, endPins.localAgentSnapshotPath) : null,
     });
     const receipt = {
       caseId: next.id,

@@ -272,7 +272,7 @@ export function ProductWorkspace({
     return (
       <div className="pw-actions">
         <button aria-pressed={saved} onClick={() => workspaceSaveAction(s, p)}>
-          {saved ? 'Remove from saved' : 'Save'}
+          {saved ? 'Remove from Selected' : 'Save'}
         </button>
         <button
           aria-pressed={s.compareIds.includes(p.id)}
@@ -344,7 +344,7 @@ export function ProductWorkspace({
               ? 'Discover'
               : v === 'compare'
                 ? `Compare${s.compareIds.length ? ` (${s.compareIds.length})` : ''}`
-                : `Saved${s.products.length ? ` (${s.products.length})` : ''}`}
+                : `Selected${s.products.length ? ` (${s.products.length})` : ''}`}
           </button>
         ))}
       </nav>
@@ -466,7 +466,7 @@ export function ProductWorkspace({
                         product,
                         why,
                         s.products.some((x) => x.product.id === product.id)
-                          ? 'Saved ✓'
+                          ? 'Selected ✓'
                           : undefined,
                       ),
                     )}
@@ -501,7 +501,7 @@ export function ProductWorkspace({
             </p>
           )}
           {!selected.length ? (
-            <EmptyProducts hint="Choose Compare on up to three pieces in Discover or Saved." />
+            <EmptyProducts hint="Choose Compare on up to three pieces in Discover or Selected." />
           ) : (
             <>
               <p className="pw-intro">
@@ -554,7 +554,7 @@ export function ProductWorkspace({
                           }
                         >
                           {s.products.some((x) => x.product.id === p.id)
-                            ? 'Remove from saved'
+                            ? 'Remove from Selected'
                             : 'Save piece'}
                         </button>
                       </div>

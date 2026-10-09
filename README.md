@@ -30,7 +30,7 @@ flowchart TB
 
 The Concierge owns interpretation, tone, questions, search decisions, curation and explanations. The application owns state, identity, source boundaries, exact arithmetic and display validation. Its three client-side tools are `update_shopping_state`, `retrieve_evidence` and `present_choices`. Product and blog indices and all index settings remain read-only. The app does not contain canned Concierge replies or a second conversational router.
 
-The browser keeps the current shopping mission in session storage. Saved, Compare and manual Combination share that state. A new conversation keeps Saved while resetting the brief and working selection. The longer-term Saved/Compare session lifecycle has not been decided. Agent Studio memory is off, and there is no login or cross-device state.
+The browser keeps the current shopping mission in session storage. Selected, Discover and Compare share that state. Agent-proposed complete looks land in the Selected view with their item subtotal, and look lines already in the selected grid carry a Selected mark. A new conversation keeps Selected pieces while resetting the brief and working selection. The longer-term Selected/Compare session lifecycle has not been decided. Agent Studio memory is off, and there is no login or cross-device state.
 
 ## Run locally
 

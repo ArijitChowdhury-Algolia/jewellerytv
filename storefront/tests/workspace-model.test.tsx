@@ -43,7 +43,7 @@ describe('v3-ready workspace view model', () => {
     const html = renderToStaticMarkup(<ProductWorkspace model={model()} />);
     expect(html).toContain('Discover');
     expect(html).toContain('Compare (2)');
-    expect(html).toContain('Saved (1)');
+    expect(html).toContain('Selected (1)');
     expect(html).not.toContain('Combination');
     expect(html).toContain('Save');
     expect(html).toContain('Compare');
