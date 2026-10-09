@@ -490,6 +490,7 @@ export async function updateShoppingState(
     const unsupported = detail.startsWith('UNSUPPORTED_FACT_ENCODING');
     const notLive = detail.startsWith('VALUE_NOT_IN_LIVE_VOCABULARY');
     const noVocabulary = detail.startsWith('VOCABULARY_UNAVAILABLE');
+    const itemScopeCollision = detail === 'ITEM_SCOPE_KEY_COLLISION';
     return {
       state,
       result: await failure(
@@ -502,8 +503,12 @@ export async function updateShoppingState(
             ? 'VOCABULARY_UNAVAILABLE'
             : unsupported
               ? 'UNSUPPORTED_FACT_ENCODING'
-              : 'operation_rejected',
-        detail,
+              : itemScopeCollision
+                ? 'ITEM_SCOPE_KEY_COLLISION'
+                : 'operation_rejected',
+        itemScopeCollision
+          ? 'Item scope key differs only by case from another live item; use its exact key or retract the conflicting scope'
+          : detail,
       ),
     };
   }

@@ -68,7 +68,90 @@ const add = (operationId = 'op-1') => ({
   ],
 });
 
+/* Item-scope collision scenarios: same exact key can hold multiple facts; distinct keys
+ * stay independent; differently cased live keys reject atomically across existing state,
+ * tentative state and one operation batch; superseded keys do not reserve identity. */
+const itemFact = (id: string, key: string, certainty: 'explicit' | 'tentative' = 'explicit') => ({
+  id,
+  field: 'budget',
+  value: { kind: 'money', cents: 50000, currency: 'USD', operator: 'lte', basis: 'per_item' },
+  scope: { kind: 'item', key },
+  strength: 'requirement',
+  certainty,
+});
+const itemOperation = (
+  id: string,
+  key: string,
+  certainty: 'explicit' | 'tentative' = 'explicit',
+) => ({
+  action: 'add',
+  factIds: [],
+  fact: itemFact(id, key, certainty),
+  sourceQuote: '$500',
+});
+const itemInput = (operationId: string, revision: number, operations: unknown[]) => ({
+  missionId: 'mission-1',
+  expectedRevision: revision,
+  operationId,
+  sourceMessageId: 'item-message',
+  operations,
+});
+const itemMessage = { id: 'item-message', text: 'I have a $500 budget' };
+
 describe('update_shopping_state domain callback', () => {
+  it('rejects a case-colliding item scope against a live fact without changing state', async () => {
+    const first = await updateShoppingState(
+      base(),
+      itemInput('first-item', 0, [itemOperation('fit-anchor', 'necklace-vg320p')]),
+      itemMessage,
+    );
+    expect(first.result.status).toBe('applied');
+    const result = await updateShoppingState(
+      first.state,
+      itemInput('case-drift', 1, [itemOperation('budget-drift', 'necklace-vg320P')]),
+      itemMessage,
+    );
+    expect(result.result).toMatchObject({
+      status: 'invalid_input',
+      failure: { code: 'ITEM_SCOPE_KEY_COLLISION' },
+    });
+    expect(result.state).toBe(first.state);
+    expect(result.state.brief.revision).toBe(1);
+    expect(result.state.receipts).toHaveLength(1);
+  });
+
+  it('rejects colliding keys in one batch, including a tentative key', async () => {
+    const original = base();
+    const result = await updateShoppingState(
+      original,
+      itemInput('batch-collision', 0, [
+        itemOperation('product-fit', 'necklace-vg320p', 'tentative'),
+        itemOperation('budget', 'necklace-vg320P'),
+      ]),
+      itemMessage,
+    );
+    expect(result.result.failure?.code).toBe('ITEM_SCOPE_KEY_COLLISION');
+    expect(result.state).toBe(original);
+    expect(result.state.brief.facts).toEqual([]);
+  });
+
+  it('preserves exact item keys with multiple facts and keeps distinct items isolated', async () => {
+    const result = await updateShoppingState(
+      base(),
+      itemInput('distinct-items', 0, [
+        itemOperation('first', 'necklace-vg320p'),
+        itemOperation('second', 'necklace-vg320p'),
+        itemOperation('third', 'bracelet-rst2197'),
+      ]),
+      itemMessage,
+    );
+    expect(result.result.status).toBe('applied');
+    expect(result.state.brief.facts.map((fact) => fact.scope.key)).toEqual([
+      'necklace-vg320p',
+      'necklace-vg320p',
+      'bracelet-rst2197',
+    ]);
+  });
   it('applies an exact correction atomically and preserves unrelated facts', async () => {
     const first = await updateShoppingState(base(), add(), message);
     expect(first.result.status).toBe('applied');

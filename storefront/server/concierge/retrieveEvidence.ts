@@ -224,6 +224,19 @@ function targetAllowed(state: BriefStateV3, itemKey: string, productType: string
     (itemKey === productType && missionProductTypes(state).includes(productType))
   );
 }
+function hasAmbiguousItemScope(state: BriefStateV3, itemKey: string): boolean {
+  const foldedTarget = itemKey.normalize('NFKC').toLowerCase();
+  const matchingKeys = new Set(
+    state.facts.flatMap((fact) =>
+      (fact.status === 'active' || fact.status === 'tentative') &&
+      fact.scope.kind === 'item' &&
+      fact.scope.key?.normalize('NFKC').toLowerCase() === foldedTarget
+        ? [fact.scope.key]
+        : [],
+    ),
+  );
+  return matchingKeys.size > 1;
+}
 function compile(
   state: BriefStateV3,
   target: { itemKey: string; productType: string } | null,
@@ -580,6 +593,23 @@ export function createEvidenceRetriever(options: EvidenceRetrieverOptions) {
         code: 'STALE_REVISION',
         message: 'Evidence request revision is no longer current',
       });
+    if (
+      input.source === 'prod_catalog' &&
+      input.target !== null &&
+      hasAmbiguousItemScope(state, input.target.itemKey)
+    )
+      return makeResult(
+        input,
+        state.revision,
+        'unsupported_constraint',
+        [],
+        [{ field: 'target', reason: 'Accepted item scopes differ only by case' }],
+        [],
+        {
+          code: 'ITEM_SCOPE_KEY_COLLISION',
+          message: 'Item target is ambiguous in the accepted brief',
+        },
+      );
     if (
       input.source === 'prod_catalog' &&
       input.target !== null &&

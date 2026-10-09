@@ -39,6 +39,13 @@ describe('approved Concierge workspace layout', () => {
     expect(html).toContain('class="concierge-prompt"');
     expect(html).toContain('class="shopping-column"');
     expect(html).toContain('aria-label="Concierge sections"');
+    expect(html).toMatch(
+      /New conversation[\s\S]*Preferences[\s\S]*Maximize Concierge window[\s\S]*Close Concierge/,
+    );
+    expect(html).toContain('class="concierge-window-resize"');
+    expect(html.indexOf('class="concierge-window-resize"')).toBeGreaterThan(
+      html.indexOf('</footer>'),
+    );
     expect(html).not.toContain('Product workspace</h2>');
   });
 

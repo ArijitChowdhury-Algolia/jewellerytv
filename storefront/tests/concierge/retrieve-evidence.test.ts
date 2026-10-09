@@ -45,6 +45,92 @@ const ring = {
 };
 
 describe('retrieve_evidence', () => {
+  /* Legacy item-scope scenarios: an exact target may have an older differently cased
+   * live or tentative sibling; refuse search before compiling partial hard constraints.
+   * Identical keys and retired siblings do not block read-only retrieval. */
+  it.each(['active', 'tentative'] as const)(
+    'fails closed before search for a legacy %s case-colliding item budget',
+    async (budgetStatus) => {
+      const search = vi.fn().mockResolvedValue([]);
+      const retrieve = createEvidenceRetriever({
+        search,
+        currentState: async () =>
+          state([
+            {
+              field: 'product_type',
+              scope: { kind: 'item', key: 'necklace-vg320p' },
+              value: {
+                kind: 'facet',
+                attribute: 'Catalog_ProductType',
+                values: ['Necklace'],
+                operator: 'any',
+              },
+            },
+            {
+              status: budgetStatus,
+              field: 'budget',
+              scope: { kind: 'item', key: 'necklace-vg320P' },
+              value: {
+                kind: 'money',
+                cents: 50000,
+                currency: 'USD',
+                operator: 'lte',
+                basis: 'per-item',
+              },
+            },
+          ]),
+      });
+      const result = await retrieve(
+        productInput({
+          target: { kind: 'item', itemKey: 'necklace-vg320p', productType: 'Necklace' },
+        }),
+      );
+      expect(result).toMatchObject({
+        status: 'unsupported_constraint',
+        error: { code: 'ITEM_SCOPE_KEY_COLLISION' },
+        records: [],
+      });
+      expect(search).not.toHaveBeenCalled();
+    },
+  );
+  it('does not reserve a retired differently cased item scope', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const retrieve = createEvidenceRetriever({
+      search,
+      currentState: async () =>
+        state([
+          {
+            field: 'product_type',
+            scope: { kind: 'item', key: 'necklace-vg320p' },
+            value: {
+              kind: 'facet',
+              attribute: 'Catalog_ProductType',
+              values: ['Necklace'],
+              operator: 'any',
+            },
+          },
+          {
+            status: 'retracted',
+            field: 'budget',
+            scope: { kind: 'item', key: 'necklace-vg320P' },
+            value: {
+              kind: 'money',
+              cents: 50000,
+              currency: 'USD',
+              operator: 'lte',
+              basis: 'per-item',
+            },
+          },
+        ]),
+    });
+    const result = await retrieve(
+      productInput({
+        target: { kind: 'item', itemKey: 'necklace-vg320p', productType: 'Necklace' },
+      }),
+    );
+    expect(result.status).toBe('zero_hits');
+    expect(search).toHaveBeenCalledTimes(1);
+  });
   it('rejects model supplied constraints and arbitrary sources', async () => {
     const retrieve = createEvidenceRetriever({
       search: vi.fn().mockResolvedValue([]),

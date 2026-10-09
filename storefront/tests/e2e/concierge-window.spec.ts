@@ -44,6 +44,16 @@ test('desktop window moves and resizes by pointer and keyboard, then restores fr
 }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 768, 'Desktop-only window controls');
   const panel = await openConcierge(page);
+  await expect(page.getByRole('textbox', { name: 'Message the Concierge' })).toHaveAttribute(
+    'placeholder',
+    'Shall we find something delighting?',
+  );
+  const header = panel.locator('.concierge-header');
+  await expect(header.getByRole('button', { name: 'Start a new conversation' })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Close Concierge' })).toBeVisible();
+  await expect(header.getByRole('button', { name: /resize concierge window/i })).toHaveCount(0);
+  await expect(header.getByRole('button', { name: /maximize concierge window/i })).toHaveCount(1);
+  await expect(header.getByRole('button', { name: 'Close Concierge' })).toHaveText('');
   const initial = await panel.boundingBox();
   expect(initial).not.toBeNull();
   expect(
@@ -117,6 +127,10 @@ test('desktop window moves and resizes by pointer and keyboard, then restores fr
 test('mobile keeps the Concierge full-screen without desktop window controls', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) >= 768, 'Mobile-only responsive behavior');
   const panel = await openConcierge(page);
+  await expect(page.getByRole('textbox', { name: 'Message the Concierge' })).toHaveAttribute(
+    'placeholder',
+    'Shall we find something delighting?',
+  );
   expect(
     await panel
       .locator('.concierge-header')
@@ -133,4 +147,12 @@ test('mobile keeps the Concierge full-screen without desktop window controls', a
   await expect(panel.getByRole('button', { name: /resize concierge window/i })).toBeHidden();
   await expect(panel.getByRole('button', { name: /maximize concierge window/i })).toBeHidden();
   await expect(panel.getByRole('button', { name: /move concierge window/i })).toBeHidden();
+  await expect(panel.locator('.connected-prompt-hint')).toBeHidden();
+  await page.setViewportSize({ width: 320, height: 812 });
+  await expect(panel.locator('.connected-prompt-hint')).toHaveText(
+    'Shall we find something delighting?',
+  );
+  await expect(panel.locator('.connected-prompt-hint')).toBeVisible();
+  await panel.getByRole('button', { name: 'Close Concierge' }).click();
+  await expect(panel).toBeHidden();
 });

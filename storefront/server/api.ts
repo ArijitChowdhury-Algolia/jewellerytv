@@ -168,9 +168,17 @@ export function createApiHandler(options: ApiOptions) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     const telemetry = new RequestTelemetry(req.headers['x-jtv-request-id']);
     const abort = new AbortController();
-    req.on('aborted', () => abort.abort());
+    let clientDisconnected = false;
+    let stream = false;
+    req.on('aborted', () => {
+      clientDisconnected = true;
+      abort.abort();
+    });
     res.on('close', () => {
-      if (!res.writableEnded) abort.abort();
+      if (!res.writableEnded) {
+        clientDisconnected = true;
+        abort.abort();
+      }
     });
     const timeout = setTimeout(() => abort.abort(), 180_000);
     timeout.unref();
@@ -245,7 +253,6 @@ export function createApiHandler(options: ApiOptions) {
       }
       let path: string;
       let payload: unknown;
-      let stream = false;
       let method = 'POST';
       if (req.method === 'POST' && url.pathname === '/api/search') {
         const input = searchSchema.parse(await body(req));
